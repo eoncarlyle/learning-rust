@@ -1,6 +1,6 @@
 # README
 
-Learning Rust by working through "The Little Book of Semaphores". Hat tip to Sean Chen for his [semaphore implementation](https://seanchen1991.github.io/posts/sync-primitives-semaphores/).
+Learning Rust by working through ["The Little Book of Semaphores"](https://greenteapress.com/wp/semaphores/). Hat tip to Sean Chen for his [semaphore implementation](https://seanchen1991.github.io/posts/sync-primitives-semaphores/).
 
 
 ## Prompt snippets
