@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::ptr::copy;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
 mod lbs;
 
@@ -86,28 +87,32 @@ fn problem_3_4() {
     let sem_clone_a = Arc::clone(&mutex);
     let sem_clone_b = Arc::clone(&mutex);
 
-    let count = Arc::new(AtomicI64::new(0));
-    let count_clone_a: Arc<AtomicI64> = Arc::clone(&count);
-    let count_clone_b: Arc<AtomicI64> = Arc::clone(&count);
+    let count = Arc::new(Mutex::new(0));
+    let count_clone_a = Arc::clone(&count);
+    let count_clone_b = Arc::clone(&count);
 
     let handle_a = thread::spawn(move || {
         sem_clone_a.acquire();
         println!("Incrementing in A");
-        let old_count = count_clone_a.fetch_add(1, Ordering::Relaxed);
-        println!("A old_count: {old_count}");
+        let mut inner_count = count_clone_a.lock().unwrap();
+        println!("A old_count: {inner_count}");
+        *inner_count += 1;
+        println!("A new_count: {inner_count}");
         sem_clone_a.release();
     });
 
     let handle_b = thread::spawn(move || {
         sem_clone_b.acquire();
-        println!("Incrementing in B");
-        let old_count = count_clone_b.fetch_add(1, Ordering::Relaxed);
-        println!("B old_count: {old_count}");
+        println!("Incrementing in A");
+        let mut inner_count = count_clone_b.lock().unwrap();
+        println!("B old_count: {inner_count}");
+        *inner_count += 1;
+        println!("B new_count: {inner_count}");
         sem_clone_b.release();
     });
 
     handle_a.join().unwrap();
     handle_b.join().unwrap();
-    let mut a = count.get_mut();
-    print!("{a}")
+    let final_count = count.lock().unwrap();
+    print!("{final_count}");
 }
