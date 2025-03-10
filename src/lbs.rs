@@ -1,12 +1,12 @@
 use std::sync::{Condvar, Mutex};
 
 pub struct Semaphore {
-    count: Mutex<usize>,
+    count: Mutex<i64>,
     cvar: Condvar,
 }
 
 impl Semaphore {
-    pub fn new(count: usize) -> Self {
+    pub fn new(count: i64) -> Self {
         Semaphore {
             count: Mutex::new(count),
             cvar: Condvar::new(),
