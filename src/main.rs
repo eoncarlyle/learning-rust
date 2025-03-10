@@ -1,11 +1,11 @@
-use std::ptr::copy;
-use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::thread::{self, JoinHandle};
+
+use lbs::Semaphore;
 mod lbs;
 
 fn main() {
-    problem_3_4();
+    problem_3_6();
 }
 
 fn problem_3_1() {
@@ -114,5 +114,56 @@ fn problem_3_4() {
     handle_a.join().unwrap();
     handle_b.join().unwrap();
     let final_count = count.lock().unwrap();
-    print!("{final_count}");
+    println!("{final_count}");
+}
+
+/*
+3.6  Barrier
+
+Puzzle: Generalize the rendezvous solution. Every thread should run the
+following code:
+
+            Barrier code
+     +----------------------+
+   1 | rendezvous            |
+   2 | critical point        |
+     +----------------------+
+
+The synchronization requirement is that no thread executes critical point
+until after all threads have executed rendezvous.
+You can assume that there are n threads and that this value is stored in a
+variable, n, that is accessible from all threads.
+When the first n 1 threads arrive they should block until the nth thread
+arrives, at which point all the threads may proceed.
+
+*/
+
+fn problem_3_6_section(sems: Vec<Arc<Semaphore>>, threadIndex: usize) -> JoinHandle<()> {
+    //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
+    return thread::spawn(move || {
+        println!("Thread {threadIndex} rendezvous");
+        sems.get(threadIndex).map(|sem| sem.release());
+        for index in 0..sems.len() {
+            if index != threadIndex {
+                sems.get(index).map(|sem| sem.acquire());
+            }
+        }
+        println!("Thread {threadIndex} critical point")
+    });
+}
+
+fn problem_3_6() {
+    let count = 4;
+    let mut sems = Vec::new();
+    for _ in 0..count {
+        sems.push(Arc::new(lbs::Semaphore::new(0)));
+    }
+
+    let mut handles = Vec::new();
+    for index in 0..count {
+        handles.push(problem_3_6_section(sems.clone(), index));
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }

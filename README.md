@@ -5,9 +5,7 @@ Learning Rust by working through ["The Little Book of Semaphores"](https://green
 
 ## Prompt snippets
 
-> Provide minimal code examples: I want to understand this concept, don't hesitate to ask me questions or probe to build my understanding.
-
-> I'd like to work through this problem on my own first. Could you just give me high-level guidance or confirm my understanding without showing specific code implementations? After I've had a chance to solve it myself, I'll share my solution
+> Provide minimal code examples: I want to understand this concept, don't hesitate to ask me questions or probe to build my understanding. I'd like to work through this problem on my own first. Could you just give me high-level guidance or confirm my understanding without showing specific code implementations? After I've had a chance to solve it myself, I'll share my solution
 
 
 ## `121e445`
@@ -61,4 +59,18 @@ Across two threads I am locking the same mutex without ever explicitly unlocking
 ### Answer
 Rust's  `Mutex` uses 'RAII (Resource Acquisition Is Initialization)'. The return type of `count_clone_a.lock().unwrap` is a `MutexGuard<T>`. This both provides access to the data and then releases the lock when it goes out of scope. This is not the last that you will see of RAII in Rust: tying resource management to variable scope is used in file handles, network connections, and other similar resources
 
+## `db9f845`
+### Question
+When using `handles.iter().for_each(|handle| handle.join().unwrap());` in place of the for loop, the build error
+```
+rustc: cannot move out of *handle which is behind a shared reference
+```
+was provided. Why is the iterator different than the for loop? I would have thought the ownership was clear?
 
+### Answer
+The problem is that `handles.iter()` provides shared `&JoinHandle<()>` references to the handles but does not grant ownership of them.
+1) `iter()` iterates over references `&T` rather than the values themselves
+2) `for_each` tries to call `join()` on the references
+3) `join()` requires ownership of `JoinHandle` rather than `&JoinHandle`
+
+Either `into_iter` or for loop forgoes this problem. When `into_iter()` is called, the iterator becomes the owner of all elements.
