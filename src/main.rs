@@ -140,6 +140,7 @@ arrives, at which point all the threads may proceed.
 
 fn problem_3_6_section(
     barrier: Arc<Semaphore>,
+    mutex_sem: Arc<Semaphore>,
     count: Arc<Mutex<i64>>,
     thread_index: i64,
     thread_count: i64,
@@ -147,11 +148,14 @@ fn problem_3_6_section(
     //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
     return thread::spawn(move || {
         println!("Thread {thread_index} rendezvous");
+        mutex_sem.acquire();
         let mut current_count = count.lock().unwrap();
         *current_count += 1;
+        print!("here {thread_count}");
         if *current_count == thread_count {
             barrier.release();
         }
+        mutex_sem.release();
         barrier.acquire();
         println!("Thread {thread_index} critical point");
         barrier.release();
@@ -162,11 +166,13 @@ fn problem_3_6() {
     let thread_count = 4;
     let barrier = Arc::new(lbs::Semaphore::new(0));
     let count = Arc::new(Mutex::new(0));
+    let mutex_sem = Arc::new(lbs::Semaphore::new(1));
     let mut handles = Vec::new();
 
     for index in 0..thread_count {
         handles.push(problem_3_6_section(
             barrier.clone(),
+            mutex_sem.clone(),
             count.clone(),
             index,
             thread_count,
