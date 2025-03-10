@@ -60,3 +60,5 @@ Across two threads I am locking the same mutex without ever explicitly unlocking
 
 ### Answer
 Rust's  `Mutex` uses 'RAII (Resource Acquisition Is Initialization)'. The return type of `count_clone_a.lock().unwrap` is a `MutexGuard<T>`. This both provides access to the data and then releases the lock when it goes out of scope. This is not the last that you will see of RAII in Rust: tying resource management to variable scope is used in file handles, network connections, and other similar resources
+
+
