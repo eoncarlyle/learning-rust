@@ -1,3 +1,4 @@
+use parking_lot::Mutex as PLMutex;
 use std::collections::LinkedList;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -243,7 +244,7 @@ fn problem_3_7() {
 fn problem_3_8_thread(
     internal_turnstile: Arc<Semaphore>,
     external_turnstile: Arc<Semaphore>,
-    dancer_list: Arc<LinkedList<String>>,
+    dancer_list: Arc<PLMutex<LinkedList<String>>>,
     label: String,
 ) -> JoinHandle<()> {
     return thread::spawn(move || {
@@ -261,11 +262,16 @@ fn problem_3_8() {
     let leader_semaphore = Arc::new(lbs::Semaphore::new(0));
     let follow_semaphore = Arc::new(lbs::Semaphore::new(0));
 
-    let mut leader_list = Arc::new(LinkedList::new());
-    leader_list.push_back(String::from("leader1"));
-    leader_list.push_back(String::from("leader2"));
-    leader_list.push_back(String::from("leader3"));
-    leader_list.push_back(String::from("leader4"));
+    let leader_list = Arc::new(PLMutex::new(LinkedList::new()));
+
+    let mut leader_list_data = leader_list.lock();
+    let mut a = *leader_list_data;
+
+    a.push_back(String::from("leader1"));
+    a.push_back(String::from("leader2"));
+    a.push_back(String::from("leader3"));
+    a.push_back(String::from("leader4"));
+    leader_list.force_unlock();
 
     let leader_handle = problem_3_8_thread(
         leader_semaphore.clone(),
@@ -282,6 +288,8 @@ fn problem_3_8() {
         follower_list,
         String::from("follower"),
     );
+
+    let mut b = *leader_list_data;
 
     follower_list.push_back(String::from("follower1"));
     follower_list.push_back(String::from("follower2"));

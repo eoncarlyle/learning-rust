@@ -119,3 +119,10 @@ fn problem_3_7_thread(
     });
 }
 ```
+
+## `11b127e`
+### Question
+While I have used atomic reference counting to share things like shared semaphores, this is the first time that I've had a mutable list - needed for the queue to work - that I need to share between both threads. This is exactly the type of thing that Rust was designed to prevent issues with. Before I use the 'unsafe' keyword, are there some Rust smart pointers that would help me safely handle this list?
+
+### Answer
+The `Arc<LinkedList<String>>` only provides shared immutable access, wheras mutable access is needed to add and remove from the queue. The most idiomatic way to accomplish this is using a mutex with an Arc.
