@@ -1,11 +1,11 @@
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
 use lbs::Semaphore;
 mod lbs;
 
 fn main() {
-    problem_3_7();
+    problem_3_8();
 }
 
 fn problem_3_1() {
@@ -190,18 +190,16 @@ fn problem_3_7_thread(
     thread_index: i64,
     thread_count: i64,
 ) -> JoinHandle<()> {
-    //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
     return thread::spawn(move || {
         println!("Thread {thread_index} rendezvous");
-        {
-            let mut count_guard = count.lock().unwrap();
-            *count_guard += 1;
-            if *count_guard == thread_count {
-                println!("First barrier released");
-                turnstile2.acquire();
-                turnstile.release();
-            }
+        let mut count_guard = count.lock().unwrap();
+        *count_guard += 1;
+        if *count_guard == thread_count {
+            println!("First barrier released");
+            turnstile2.acquire();
+            turnstile.release();
         }
+
         turnstile.acquire();
         turnstile.release();
         {
@@ -239,4 +237,35 @@ fn problem_3_7() {
     for handle in handles {
         handle.join().unwrap();
     }
+}
+
+fn problem_3_8_thread(
+    internal_turnstile: Arc<Semaphore>,
+    external_turnstile: Arc<Semaphore>,
+    label: String,
+) -> JoinHandle<()> {
+    return thread::spawn(move || {
+        println!("{label} thread waiting");
+        internal_turnstile.release();
+        external_turnstile.acquire();
+        println!("{label} thread triggered");
+    });
+}
+
+fn problem_3_8() {
+    let leader_semaphore = Arc::new(lbs::Semaphore::new(0));
+    let follow_semaphore = Arc::new(lbs::Semaphore::new(0));
+
+    let leader_handle = problem_3_8_thread(
+        leader_semaphore.clone(),
+        follow_semaphore.clone(),
+        String::from("leader"),
+    );
+    let follower_handle = problem_3_8_thread(
+        follow_semaphore.clone(),
+        leader_semaphore.clone(),
+        String::from("follower"),
+    );
+    leader_handle.join().unwrap();
+    follower_handle.join().unwrap();
 }

@@ -122,9 +122,8 @@ mutex.wait()
 mutex.signal()
 ```
 
-The problem is that a single thread can pass through the second mutex and then be put back in place into the second.
+The problem is that a single thread can pass through the second mutex and then be put back in place into the second. My initial attempt of the problem is below. The biggest issue is that not all threads wait at the start of the first turnstile.
 
-My attempt:
 ```
 turnstile0.wait()
 turnstile0.signal()
@@ -144,6 +143,8 @@ mutex.wait()
 mutex.signal()
 ```
 
+The final solution is
+
 ```
 rendevous
 mutex.wait()
@@ -153,16 +154,20 @@ mutex.wait()
     turnstile0.signal()
 mutex.signal()
 
-turnstile1.wait()
-turnstile1.signal()
+turnstile0.wait()
+turnstile0.signal()
 
 critical point
 mutex.wait()
   count -= 1
   if count == 0:
     turnstile0.wait()
-    turnstile2.signal()
+    turnstile1.signal()
 mutex.signal()
-turnstile2.wait()
-turnstile2.signal()
+turnstile1.wait()
+turnstile1.signal()
 ```
+
+The reasons that this works are that
+1) Only the _n_th thread can lock or unlock the turnstiles
+2) Before a thread can unlock the first turnstile, it has to close the second and vise versa. This prevents one thread from getting ahead of the others.
