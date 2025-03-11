@@ -78,3 +78,6 @@ Either `into_iter` or for loop forgoes this problem. When `into_iter()` is calle
 ## `afb0f86`
 ### Question
 I need a mutex that I can lock and unlock on demand, but the Rust lifetime model makes it hard to do that. I didn't have this issue on a similar, single-phase barrier. Is there a concurrency primitive that I do not know about, or are there questions I need to ask myself about mutexes?
+
+### Answer
+For the mutex issue, one approach is to ensure you're using very small, well-defined scopes for each mutex operation.
