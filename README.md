@@ -81,3 +81,82 @@ I need a mutex that I can lock and unlock on demand, but the Rust lifetime model
 
 ### Answer
 For the mutex issue, one approach is to ensure you're using very small, well-defined scopes for each mutex operation.
+
+## `4d99c7f`
+### Commentary
+
+I do not have great intuition as to why the first function worked and the second function didn't. Clearly the turnstiles dropping out of scope matters, but confusing things is that if only one of the turnstiels is in it's
+
+```rust
+fn problem_3_7_thread(
+    turnstile: Arc<Semaphore>,
+    turnstile2: Arc<Semaphore>,
+    count: Arc<Mutex<i64>>,
+    thread_index: i64,
+    thread_count: i64,
+) -> JoinHandle<()> {
+    //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
+    return thread::spawn(move || {
+        {
+            println!("Thread {thread_index} rendezvous");
+            let mut count_guard = count.lock().unwrap();
+            *count_guard += 1;
+            println!("Thread {thread_index} mutate");
+            if *count_guard == thread_count {
+                turnstile2.acquire();
+                turnstile.release();
+            }
+        }
+        turnstile.acquire();
+        turnstile.release();
+        {
+            let mut count_guard = count.lock().unwrap();
+            *count_guard -= 1;
+            if *count_guard == thread_count {
+                turnstile.acquire();
+                turnstile2.release();
+            }
+        }
+        turnstile.acquire();
+        println!("Thread {thread_index} critical point");
+        turnstile.release();
+    });
+}
+```
+
+```rust
+fn problem_3_7_thread(
+    turnstile: Arc<Semaphore>,
+    turnstile2: Arc<Semaphore>,
+    count: Arc<Mutex<i64>>,
+    thread_index: i64,
+    thread_count: i64,
+) -> JoinHandle<()> {
+    //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
+    return thread::spawn(move || {
+        {
+            println!("Thread {thread_index} rendezvous");
+            let mut count_guard = count.lock().unwrap();
+            *count_guard += 1;
+            println!("Thread {thread_index} mutate");
+            if *count_guard == thread_count {
+                turnstile2.acquire();
+                turnstile.release();
+            }
+            turnstile.acquire();
+            turnstile.release();
+        }
+        {
+            let mut count_guard = count.lock().unwrap();
+            *count_guard -= 1;
+            if *count_guard == thread_count {
+                turnstile.acquire();
+                turnstile2.release();
+            }
+            turnstile.acquire();
+            turnstile.release();
+        }
+        println!("Thread {thread_index} critical point");
+    });
+}
+```

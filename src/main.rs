@@ -192,12 +192,12 @@ fn problem_3_7_thread(
 ) -> JoinHandle<()> {
     //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
     return thread::spawn(move || {
+        println!("Thread {thread_index} rendezvous");
         {
-            println!("Thread {thread_index} rendezvous");
             let mut count_guard = count.lock().unwrap();
             *count_guard += 1;
-            println!("Thread {thread_index} mutate");
             if *count_guard == thread_count {
+                println!("First barrier released");
                 turnstile2.acquire();
                 turnstile.release();
             }
@@ -207,14 +207,16 @@ fn problem_3_7_thread(
         {
             let mut count_guard = count.lock().unwrap();
             *count_guard -= 1;
-            if *count_guard == thread_count {
+            println!("Thread {thread_index} second mutate");
+            if *count_guard == 0 {
+                println!("Second barrier released");
                 turnstile.acquire();
                 turnstile2.release();
             }
         }
-        turnstile.acquire();
+        turnstile2.acquire();
+        turnstile2.release();
         println!("Thread {thread_index} critical point");
-        turnstile.release();
     });
 }
 
