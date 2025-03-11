@@ -169,5 +169,13 @@ turnstile1.signal()
 ```
 
 The reasons that this works are that
-1) Only the _n_th thread can lock or unlock the turnstiles
+1) Only the _n_ th thread can lock or unlock the turnstiles
 2) Before a thread can unlock the first turnstile, it has to close the second and vise versa. This prevents one thread from getting ahead of the others.
+
+It is worth noting that the turnstile requires a lot of thread context switching by forcing threads to go through sequentially, but this can be addressed by 'preloading' a turnstile by the _n_ th turnstile unlocking _n_ times
+
+```
+leaders and followers, wait in two queues before entering the
+dance floor. When a leader arrives, it checks to see if there is a follower waiting.
+If so, they can both proceed. Otherwise it waits.
+```

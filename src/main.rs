@@ -1,3 +1,4 @@
+use std::collections::LinkedList;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
@@ -242,13 +243,17 @@ fn problem_3_7() {
 fn problem_3_8_thread(
     internal_turnstile: Arc<Semaphore>,
     external_turnstile: Arc<Semaphore>,
+    dancer_list: Arc<LinkedList<String>>,
     label: String,
 ) -> JoinHandle<()> {
     return thread::spawn(move || {
-        println!("{label} thread waiting");
-        internal_turnstile.release();
-        external_turnstile.acquire();
-        println!("{label} thread triggered");
+        while !dancer_list.is_empty() {
+            println!("{label} thread waiting");
+            internal_turnstile.release();
+            external_turnstile.acquire();
+            let mut a = dancer_list.pop_front().unwrap();
+            println!("Daner: {a}")
+        }
     });
 }
 
@@ -256,16 +261,31 @@ fn problem_3_8() {
     let leader_semaphore = Arc::new(lbs::Semaphore::new(0));
     let follow_semaphore = Arc::new(lbs::Semaphore::new(0));
 
+    let mut leader_list = Arc::new(LinkedList::new());
+    leader_list.push_back(String::from("leader1"));
+    leader_list.push_back(String::from("leader2"));
+    leader_list.push_back(String::from("leader3"));
+    leader_list.push_back(String::from("leader4"));
+
     let leader_handle = problem_3_8_thread(
         leader_semaphore.clone(),
         follow_semaphore.clone(),
+        leader_list,
         String::from("leader"),
     );
+
+    let mut follower_list = Arc::new(LinkedList::new());
+
     let follower_handle = problem_3_8_thread(
         follow_semaphore.clone(),
         leader_semaphore.clone(),
+        follower_list,
         String::from("follower"),
     );
+
+    follower_list.push_back(String::from("follower1"));
+    follower_list.push_back(String::from("follower2"));
+
     leader_handle.join().unwrap();
     follower_handle.join().unwrap();
 }
