@@ -74,3 +74,7 @@ The problem is that `handles.iter()` provides shared `&JoinHandle<()>` reference
 3) `join()` requires ownership of `JoinHandle` rather than `&JoinHandle`
 
 Either `into_iter` or for loop forgoes this problem. When `into_iter()` is called, the iterator becomes the owner of all elements.
+
+## `afb0f86`
+### Question
+I need a mutex that I can lock and unlock on demand, but the Rust lifetime model makes it hard to do that. I didn't have this issue on a similar, single-phase barrier. Is there a concurrency primitive that I do not know about, or are there questions I need to ask myself about mutexes?

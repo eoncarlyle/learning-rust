@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle, current};
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread::{self, JoinHandle};
 
 use lbs::Semaphore;
 mod lbs;
@@ -183,3 +183,58 @@ fn problem_3_6() {
 Rewrite the barrier solution so that after all the threads have passed
 through, the turnstile is locked again.
 */
+fn problem_3_7_thread(
+    turnstile0: Arc<Semaphore>,
+    turnstile1: Arc<Semaphore>,
+    count0: Mutex<i64>,
+    count1: Mutex<i64>,
+    thread_index: i64,
+    thread_count: i64,
+) -> JoinHandle<()> {
+    //let sem_clones: Vec<Arc<Semaphore>> = sems.iter().map(|sem| Arc::clone(&sem)).collect();
+    return thread::spawn(move || {
+        println!("Thread {thread_index} rendezvous");
+        let mut first_count = count0.lock().unwrap();
+        *first_count += 1;
+        println!("Thread {thread_index} mutate");
+        if *first_count == thread_count {
+            turnstile1.acquire();
+            turnstile0.release();
+        }
+        drop(first_count);
+        turnstile0.acquire();
+        turnstile0.release();
+
+        let mut second_count = count1.lock().unwrap();
+        *second_count -= 1;
+        turnstile0.acquire();
+        turnstile1.release();
+
+        drop(second_count);
+        turnstile0.acquire();
+        println!("Thread {thread_index} critical point");
+        turnstile0.release();
+    });
+}
+
+fn problem_3_7() {
+    let thread_count = 4;
+    let turnstile0 = Arc::new(lbs::Semaphore::new(0));
+    let turnstile1 = Arc::new(lbs::Semaphore::new(1));
+    let mutex0 = Arc::new(Mutex::new(0));
+    let mutex1 = Arc::new(Mutex::new(0));
+    let mut handles = Vec::new();
+
+    for index in 0..thread_count {
+        handles.push(problem_3_7_thread(
+            turnstile0.clone(),
+            turnstile1.clone(),
+            mutex.clone(),
+            index,
+            thread_count,
+        ));
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}

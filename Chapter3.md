@@ -122,7 +122,28 @@ mutex.wait()
 mutex.signal()
 ```
 
-The problem is that a single thread can pass through the second mutex and then be put back in place into the second
+The problem is that a single thread can pass through the second mutex and then be put back in place into the second.
+
+My attempt:
+```
+turnstile0.wait()
+turnstile0.signal()
+rendevous
+mutex.wait()
+  count += 1
+  if count == n: turnstile1.signal()
+mutex.signal()
+
+turnstile1.wait()
+turnstile1.signal()
+
+critical point
+mutex.wait()
+  count -= 1
+  if count == 0: turnstile0.wait()
+mutex.signal()
+```
+
 ```
 rendevous
 mutex.wait()
