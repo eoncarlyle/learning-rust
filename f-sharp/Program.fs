@@ -30,6 +30,7 @@ let problem_3_8_task (internal_sem: Semaphore) (external_sem: Semaphore) (dancer
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}"
     }
 
+
 let problem_3_8 () =
     let leader_sem = new Semaphore(0, 1)
     let follower_sem = new Semaphore(0, 1)
@@ -56,3 +57,41 @@ let problem_3_8 () =
     0
 
 problem_3_8 ()
+
+let problem_3_8_thread_alt (leaderQueue: Semaphore, followerQueue: Semaphore, dancerType: string, id: int) =
+    Thread(fun () ->
+        Console.WriteLine($"{dancerType} {id} has arrived")
+
+        match dancerType with
+        | "leader" ->
+            if dancerType = "leader" then
+                if followerQueue.WaitOne(0) then
+                    Console.WriteLine($"{dancerType} {id} paired with a follower")
+                else
+                    Console.WriteLine($"{dancerType} {id} is waiter")
+                    leaderQueue.Release() |> ignore
+        | _ ->
+            if leaderQueue.WaitOne(0) then
+                Console.WriteLine($"{dancerType} {id} paired with a leader")
+            else
+                Console.WriteLine($"{dancerType} {id} is waiting")
+                followerQueue.Release() |> ignore
+                Thread.Sleep(0))
+
+let problem_3_8_alt () =
+    // Claude initially halucinated new Semaphore(0,100)
+    let leaderQueue = new Semaphore(0, 1)
+    let followerQueue = new Semaphore(0, 1)
+
+    let dancers =
+        [ problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 1)
+          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 1)
+          problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 2)
+          problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 3)
+          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 2)
+          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 3) ]
+
+    dancers |> List.iter (_.Start())
+    dancers |> List.iter (_.Join())
+
+    0

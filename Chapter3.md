@@ -49,7 +49,6 @@ let handle_b = thread::spawn(move || {
 
 ## Section 3.6
 
-
 Puzzle: Generalize the rendezvous solution. Every thread should run the
 following code:
 
@@ -179,3 +178,7 @@ leaders and followers, wait in two queues before entering the
 dance floor. When a leader arrives, it checks to see if there is a follower waiting.
 If so, they can both proceed. Otherwise it waits.
 ```
+
+## Section 3.8
+
+My solution to the simple queue was in `c542641`. Given how relatively underspecified the problem is I came up with something a little different than Claude, but Claude's solution probabyl does make more sense (and is also more 'Rustable').
