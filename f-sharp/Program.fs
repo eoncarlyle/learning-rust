@@ -4,8 +4,8 @@ open System.Threading
 open System
 
 let problem_3_8_thread
-    (internal_sem: Semaphore)
-    (external_sem: Semaphore)
+    (internal_sem: SemaphoreSlim)
+    (external_sem: SemaphoreSlim)
     (dancer_list: Queue<String>)
     (label: String)
     =
@@ -16,24 +16,29 @@ let problem_3_8_thread
             if dancer_list.Count <> 0 then
                 Console.WriteLine $"{label} thread waiting"
                 internal_sem.Release() |> ignore
-                external_sem.WaitOne() |> ignore
+                external_sem.Wait() |> ignore
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}")
 
 // `54d86e2`: held at first task, why?
-let problem_3_8_task (internal_sem: Semaphore) (external_sem: Semaphore) (dancer_list: Queue<String>) (label: String) =
+let problem_3_8_task
+    (internal_sem: SemaphoreSlim)
+    (external_sem: SemaphoreSlim)
+    (dancer_list: Queue<String>)
+    (label: String)
+    =
     task {
         while true do
             if dancer_list.Count <> 0 then
                 Console.WriteLine $"{label} thread waiting"
                 internal_sem.Release() |> ignore
-                external_sem.WaitOne() |> ignore
+                external_sem.Wait() |> ignore
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}"
     }
 
 
-let problem_3_8 () =
-    let leader_sem = new Semaphore(0, 1)
-    let follower_sem = new Semaphore(0, 1)
+let problem_3_8 (concurrency_model) =
+    let leader_sem = new SemaphoreSlim(0, 1)
+    let follower_sem = new SemaphoreSlim(0, 1)
     let follow_list = new Queue<String>()
     let leader_list = new Queue<String>()
 
@@ -42,21 +47,30 @@ let problem_3_8 () =
     leader_list.Enqueue("leader3")
     leader_list.Enqueue("leader4")
 
-    let leaders = problem_3_8_thread leader_sem follower_sem leader_list "leader"
+    match concurrency_model with
+    | "threads" ->
+        let leaders = problem_3_8_thread leader_sem follower_sem leader_list "leader"
+        let follwers = problem_3_8_thread follower_sem leader_sem follow_list "follower"
+        leaders.Start()
+        follwers.Start()
 
-    let follwers = problem_3_8_thread follower_sem leader_sem follow_list "follower"
+        follow_list.Enqueue("follower1")
+        follow_list.Enqueue("follower2")
+        follow_list.Enqueue("follower3")
 
-    leaders.Start()
-    follwers.Start()
+        follwers.Join()
+    | "tasks" ->
+        let leaders = problem_3_8_task leader_sem follower_sem leader_list "leader"
+        let follwers = problem_3_8_task follower_sem leader_sem follow_list "follower"
+        leaders.Start()
+        follwers.Start()
 
-    follow_list.Enqueue("follower1")
-    follow_list.Enqueue("follower2")
-    follow_list.Enqueue("follower3")
 
-    follwers.Join()
-    0
+    | _ -> Console.WriteLine("Unsupported model")
 
-problem_3_8 ()
+
+
+problem_3_8 ("threads")
 
 let problem_3_8_thread_alt (leaderQueue: Semaphore, followerQueue: Semaphore, dancerType: string, id: int) =
     Thread(fun () ->
