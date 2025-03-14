@@ -126,3 +126,12 @@ While I have used atomic reference counting to share things like shared semaphor
 
 ### Answer
 The `Arc<LinkedList<String>>` only provides shared immutable access, wheras mutable access is needed to add and remove from the queue. The most idiomatic way to accomplish this is using a mutex with an Arc.
+
+## `74b6cd6`
+### Question
+Unfortunately the book was pretty vague about the format of the solution - it's not like they said 'conform to this interface. I think this might be a situation where your \[Claude's\] solution is more correct than the provided solution. As a large langauge model you might already know this, but I am using this book to learn Rust (and semaphores).
+
+My Rust 'solution' (that doesn't build) faces a problem where if I need to share a mutable queue across threads, I run into ownership problems. There seems to be a deeper lesson here. By moving from an explicit queue to an implicit queue (calling the same function across different dancer inputs) there aren't mutable references that need to be handed back and forth. Are there other lessons here?
+
+### Answer
+The book doesn't give a lot of detail but it more or less uses the semaphores as an implicit queue. Just like was done for other problems in the book, it is still the right choice to use seprate threads for each dancer. Two functions, `leader` and `follower`, should be delcared with two `Arc<Semaphore>` arguments. Then it is only a matter of cloning semaphores, spawning threads, and moving ownership in exactly the same way that has been done in the rest of the book.
