@@ -19,7 +19,7 @@ let problem_3_8_thread
                 external_sem.WaitOne() |> ignore
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}")
 
-
+// `54d86e2`: held at first task, why?
 let problem_3_8_task (internal_sem: Semaphore) (external_sem: Semaphore) (dancer_list: Queue<String>) (label: String) =
     task {
         while true do
@@ -41,18 +41,18 @@ let problem_3_8 () =
     leader_list.Enqueue("leader3")
     leader_list.Enqueue("leader4")
 
-    let leaders = problem_3_8_task leader_sem follower_sem leader_list "leader"
+    let leaders = problem_3_8_thread leader_sem follower_sem leader_list "leader"
 
-    let follwers = problem_3_8_task follower_sem leader_sem follow_list "follower"
+    let follwers = problem_3_8_thread follower_sem leader_sem follow_list "follower"
 
-    follwers.Start()
     leaders.Start()
+    follwers.Start()
 
     follow_list.Enqueue("follower1")
     follow_list.Enqueue("follower2")
     follow_list.Enqueue("follower3")
 
-    follwers.Wait()
+    follwers.Join()
     0
 
 problem_3_8 ()
