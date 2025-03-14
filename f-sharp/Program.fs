@@ -1,7 +1,10 @@
 open System.Threading
 open System.Collections.Generic
-open System.Threading
+open System.Threading.Tasks
 open System
+
+type DancerType = Leader | Follower
+type ConcurrencyType = ThreadModel | TaskModel
 
 let problem_3_8_thread
     (internal_sem: Semaphore)
@@ -31,7 +34,7 @@ let problem_3_8_task (internal_sem: Semaphore) (external_sem: Semaphore) (dancer
     }
 
 
-let problem_3_8 (concurrency_model) =
+let problem_3_8 concurrency_model =
     let leader_sem = new Semaphore(0, 1)
     let follower_sem = new Semaphore(0, 1)
     let follow_list = new Queue<String>()
@@ -43,7 +46,7 @@ let problem_3_8 (concurrency_model) =
     leader_list.Enqueue("leader4")
 
     match concurrency_model with
-    | "threads" ->
+    | ThreadModel ->
         let leaders = problem_3_8_thread leader_sem follower_sem leader_list "leader"
         let follwers = problem_3_8_thread follower_sem leader_sem follow_list "follower"
         leaders.Start()
@@ -54,53 +57,68 @@ let problem_3_8 (concurrency_model) =
         follow_list.Enqueue("follower3")
 
         follwers.Join()
-    | "tasks" ->
+    | TaskModel ->
         let leaders = problem_3_8_task leader_sem follower_sem leader_list "leader"
         let follwers = problem_3_8_task follower_sem leader_sem follow_list "follower"
         leaders.Start()
         follwers.Start()
 
 
-    | _ -> Console.WriteLine("Unsupported model")
+//problem_3_8 "tasks"
 
-
-
-problem_3_8 ("threads")
-
-let problem_3_8_thread_alt (leaderQueue: Semaphore, followerQueue: Semaphore, dancerType: string, id: int) =
+let problem_3_8_thread_alt  (leaderQueue: Semaphore) (followerQueue: Semaphore) (dancerType: string) (id: int) =
     Thread(fun () ->
         Console.WriteLine($"{dancerType} {id} has arrived")
 
         match dancerType with
         | "leader" ->
-            if dancerType = "leader" then
-                if followerQueue.WaitOne(0) then
-                    Console.WriteLine($"{dancerType} {id} paired with a follower")
-                else
-                    Console.WriteLine($"{dancerType} {id} is waiter")
-                    leaderQueue.Release() |> ignore
+            leaderQueue.Release() |> ignore
+            Console.WriteLine($"{dancerType} {id} is waiting")
+            followerQueue.WaitOne() |> ignore
+            Console.WriteLine($"{dancerType} {id} paired with a follower")
         | _ ->
-            if leaderQueue.WaitOne(0) then
-                Console.WriteLine($"{dancerType} {id} paired with a leader")
-            else
-                Console.WriteLine($"{dancerType} {id} is waiting")
-                followerQueue.Release() |> ignore
-                Thread.Sleep(0))
+            followerQueue.Release() |> ignore
+            Console.WriteLine($"{dancerType} {id} is waiting")
+            leaderQueue.WaitOne() |> ignore
+            Console.WriteLine($"{dancerType} {id} paired with a leader")
+            Thread.Sleep(0))
+let problem_3_8_task_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (dancerType: string) (id: int) =
+    task {
+        Console.WriteLine($"{dancerType} {id} has arrived")
 
-let problem_3_8_alt () =
+        match dancerType with
+        | "leader" ->
+            leaderQueue.Release() |> ignore
+            Console.WriteLine($"{dancerType} {id} is waiting")
+            followerQueue.WaitOne() |> ignore
+            Console.WriteLine($"{dancerType} {id} paired with a follower")
+        | _ ->
+            followerQueue.Release() |> ignore
+            Console.WriteLine($"{dancerType} {id} is waiting")
+            leaderQueue.WaitOne() |> ignore
+            Console.WriteLine($"{dancerType} {id} paired with a leader")
+            do! Task.Delay(0)
+    }
+let problem_3_8_alt concurrency_model = 
     // Claude initially halucinated new Semaphore(0,100)
-    let leaderQueue = new Semaphore(0, 1)
-    let followerQueue = new Semaphore(0, 1)
+    let leaderQueue = new Semaphore(0, 3)
+    let followerQueue = new Semaphore(0, 3)
 
-    let dancers =
-        [ problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 1)
-          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 1)
-          problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 2)
-          problem_3_8_thread_alt (leaderQueue, followerQueue, "leader", 3)
-          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 2)
-          problem_3_8_thread_alt (leaderQueue, followerQueue, "follower", 3) ]
+    let dancers = [ ("leader", 1);
+          ( "follower", 1);
+          ( "leader", 2);
+          ( "leader", 3);
+          ( "follower", 2);
+          ( "follower", 3) ]
+         
+         
+    match concurrency_model with
+    | TaskModel ->
+        let threads = dancers |> List.map (fun d -> d ||> problem_3_8_thread_alt leaderQueue followerQueue)
+        threads |> List.iter _.Start()
+        threads |> List.iter _.Join()
+    | ThreadModel ->
+        let tasks = dancers |> List.map (fun d -> d ||> problem_3_8_task_alt leaderQueue followerQueue)
+        Task.WhenAll tasks |> ignore
 
-    dancers |> List.iter (_.Start())
-    dancers |> List.iter (_.Join())
-
-    0
+problem_3_8_alt TaskModel
