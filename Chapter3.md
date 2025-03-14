@@ -181,4 +181,4 @@ If so, they can both proceed. Otherwise it waits.
 
 ## Section 3.8
 
-My solution to the simple queue was in `c542641`. Given how relatively underspecified the problem is I came up with something a little different than Claude, but Claude's solution probabyl does make more sense (and is also more 'Rustable'). However - note that the 'cross turnstile' where a different semaphore is released than the one acquired is clearly the right way to go.
+My solution to the simple queue was in `c542641`. Given how relatively underspecified the problem is I came up with something a little different than Claude, but Claude's solution probabyl does make more sense (and is also more 'Rustable'). However - note that the 'cross turnstile' where a different semaphore is released than the one acquired is clearly the right way to go. For the rest of these having a 'thread per actor' model makes sense.
