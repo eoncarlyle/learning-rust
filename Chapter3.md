@@ -197,4 +197,8 @@ clearly the right way to go. For the rest of these having a 'thread per actor' m
 
 ## Section 3.8/Exclusive
 
-My non-solution for the exclusive dance queue was in `b4e86cb`
+My non-solution for the exclusive dance queue was in `b4e86cb`, which had a deadlock on the current follower id mutex.
+`57700e4` was almost there, but it requried the `current_follower_id` to have a non-dancer `id` otherwise there was
+a race condition where if _N_ was the original mutex value and the _N_ th leader acquired the mutex first but a ! 
+_N_ follower did the same, a race condition would apply. At this point we're using a _lot_ of mutexes, but I think 
+this could technicaly be fixed with another one

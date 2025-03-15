@@ -310,6 +310,7 @@ fn problem_3_8_exclusive_thread(
     internal_leader_semaphore: Arc<Semaphore>,
     follow_semaphore: Arc<Semaphore>,
     internal_follow_semaphore: Arc<Semaphore>,
+    search_semaphore: Arc<Semaphore>,
     current_follower_id: Arc<Mutex<i64>>,
     dancer: Dancer,
 ) -> JoinHandle<()> {
@@ -320,6 +321,7 @@ fn problem_3_8_exclusive_thread(
 
             while !selected {
                 internal_leader_semaphore.acquire();
+                search_semaphore.acquire();
                 {
                     let current_follower_id_value = current_follower_id.lock().unwrap();
                     if *current_follower_id_value == dancer.id {
@@ -358,6 +360,7 @@ fn problem_3_8_exclusive() {
     let internal_leader_semaphore = Arc::new(Semaphore::new(1));
     let follow_semaphore = Arc::new(Semaphore::new(0));
     let internal_follow_semaphore = Arc::new(Semaphore::new(1));
+    let search_semaphore = Arc::new(Semaphore::new(0));
     let current_follower_id = Arc::new(Mutex::new(-1));
     let mut handles = Vec::new();
 
