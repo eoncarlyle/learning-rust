@@ -2,7 +2,7 @@ use parking_lot::Mutex as PLMutex;
 use std::collections::LinkedList;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle, current};
-
+use std::time;
 use lbs::Semaphore;
 mod lbs;
 
@@ -310,7 +310,6 @@ fn problem_3_8_exclusive_thread(
     internal_leader_semaphore: Arc<Semaphore>,
     follow_semaphore: Arc<Semaphore>,
     internal_follow_semaphore: Arc<Semaphore>,
-    search_semaphore: Arc<Semaphore>,
     current_follower_id: Arc<Mutex<i64>>,
     dancer: Dancer,
 ) -> JoinHandle<()> {
@@ -321,7 +320,7 @@ fn problem_3_8_exclusive_thread(
 
             while !selected {
                 internal_leader_semaphore.acquire();
-                search_semaphore.acquire();
+                follow_semaphore.acquire();
                 println!("Leader {id} start");
                 {
                     let current_follower_id_value = current_follower_id.lock().unwrap();
@@ -330,12 +329,12 @@ fn problem_3_8_exclusive_thread(
                         selected = true;
                     } else {
                         internal_leader_semaphore.release();
-                        search_semaphore.release();
+                        follow_semaphore.release();
+                        thread::sleep(time::Duration::from_millis(10));
                     }
                 }
             }
             leader_semaphore.release();
-            follow_semaphore.acquire();
             println!("Leader {id} danced");
             internal_leader_semaphore.release();
         } else {
@@ -345,7 +344,6 @@ fn problem_3_8_exclusive_thread(
                 *current_follower_id_value = id;
             }
             println!("Follow {id} locked");
-            search_semaphore.release();
             follow_semaphore.release();
             leader_semaphore.acquire();
             println!("Follower {id} danced");
@@ -363,7 +361,6 @@ fn problem_3_8_exclusive() {
     let internal_leader_semaphore = Arc::new(Semaphore::new(1));
     let follow_semaphore = Arc::new(Semaphore::new(0));
     let internal_follow_semaphore = Arc::new(Semaphore::new(1));
-    let search_semaphore = Arc::new(Semaphore::new(0));
     let current_follower_id = Arc::new(Mutex::new(-1));
     let mut handles = Vec::new();
 
@@ -373,7 +370,6 @@ fn problem_3_8_exclusive() {
             internal_leader_semaphore.clone(),
             follow_semaphore.clone(),
             internal_follow_semaphore.clone(),
-            search_semaphore.clone(),
             current_follower_id.clone(),
             Dancer {
                 is_leader: true,
@@ -386,7 +382,6 @@ fn problem_3_8_exclusive() {
             internal_leader_semaphore.clone(),
             follow_semaphore.clone(),
             internal_follow_semaphore.clone(),
-            search_semaphore.clone(),
             current_follower_id.clone(),
             Dancer {
                 is_leader: false,
