@@ -1,13 +1,13 @@
 use parking_lot::Mutex as PLMutex;
 use std::collections::LinkedList;
 use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::thread::{self, JoinHandle, current};
 
 use lbs::Semaphore;
 mod lbs;
 
 fn main() {
-    problem_3_8();
+    problem_3_8_exclusive();
 }
 
 fn problem_3_1() {
@@ -241,6 +241,7 @@ fn problem_3_7() {
     }
 }
 
+/*
 fn problem_3_8_thread(
     internal_turnstile: Arc<Semaphore>,
     external_turnstile: Arc<Semaphore>,
@@ -296,4 +297,93 @@ fn problem_3_8() {
 
     leader_handle.join().unwrap();
     follower_handle.join().unwrap();
+}
+*/
+
+struct Dancer {
+    is_leader: bool,
+    id: i64,
+}
+
+fn problem_3_8_exclusive_thread(
+    leader_semaphore: Arc<Semaphore>,
+    internal_leader_semaphore: Arc<Semaphore>,
+    follow_semaphore: Arc<Semaphore>,
+    internal_follow_semaphore: Arc<Semaphore>,
+    current_follower_id: Arc<Mutex<i64>>,
+    dancer: Dancer,
+) -> JoinHandle<()> {
+    return thread::spawn(move || {
+        let id = dancer.id;
+        if (dancer.is_leader) {
+            let mut selected = false;
+
+            while !selected {
+                internal_leader_semaphore.acquire();
+                {
+                    let current_follower_id_value = current_follower_id.lock().unwrap();
+                    if *current_follower_id_value == dancer.id {
+                        println!("Leader {id}");
+                        selected = true;
+                    } else {
+                        internal_leader_semaphore.release();
+                    }
+                }
+            }
+            leader_semaphore.release();
+            follow_semaphore.acquire();
+            println!("Leader {id} danced");
+            internal_leader_semaphore.release();
+        } else {
+            internal_follow_semaphore.acquire();
+            let mut current_follower_id_value = current_follower_id.lock().unwrap();
+            *current_follower_id_value = id;
+            follow_semaphore.release();
+            leader_semaphore.acquire();
+            println!("Follower {id} danced");
+            internal_follow_semaphore.release();
+        }
+    });
+}
+
+fn problem_3_8_exclusive() {
+    //Followers will 'wait' for their associated leader
+    //Set a mutex with the id of the current follower
+    //If a leader aquires the semaphore but their follower isn't there yet, they must relinquish
+
+    let leader_semaphore = Arc::new(lbs::Semaphore::new(0));
+    let internal_leader_semaphore = Arc::new(lbs::Semaphore::new(1));
+    let follow_semaphore = Arc::new(lbs::Semaphore::new(0));
+    let internal_follow_semaphore = Arc::new(lbs::Semaphore::new(1));
+    let current_follower_id = Arc::new(Mutex::new(0));
+    let mut handles = Vec::new();
+
+    for id in 0..4 {
+        handles.push(problem_3_8_exclusive_thread(
+            leader_semaphore.clone(),
+            internal_leader_semaphore.clone(),
+            follow_semaphore.clone(),
+            internal_follow_semaphore.clone(),
+            current_follower_id.clone(),
+            Dancer {
+                is_leader: true,
+                id: id,
+            },
+        ));
+
+        handles.push(problem_3_8_exclusive_thread(
+            leader_semaphore.clone(),
+            internal_leader_semaphore.clone(),
+            follow_semaphore.clone(),
+            internal_follow_semaphore.clone(),
+            current_follower_id.clone(),
+            Dancer {
+                is_leader: false,
+                id: id,
+            },
+        ));
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
