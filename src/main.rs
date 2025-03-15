@@ -335,9 +335,12 @@ fn problem_3_8_exclusive_thread(
             println!("Leader {id} danced");
             internal_leader_semaphore.release();
         } else {
+            println!("Follow {id}");
             internal_follow_semaphore.acquire();
-            let mut current_follower_id_value = current_follower_id.lock().unwrap();
-            *current_follower_id_value = id;
+            {
+                let mut current_follower_id_value = current_follower_id.lock().unwrap();
+                *current_follower_id_value = id;
+            }
             follow_semaphore.release();
             leader_semaphore.acquire();
             println!("Follower {id} danced");
@@ -351,11 +354,11 @@ fn problem_3_8_exclusive() {
     //Set a mutex with the id of the current follower
     //If a leader aquires the semaphore but their follower isn't there yet, they must relinquish
 
-    let leader_semaphore = Arc::new(lbs::Semaphore::new(0));
-    let internal_leader_semaphore = Arc::new(lbs::Semaphore::new(1));
-    let follow_semaphore = Arc::new(lbs::Semaphore::new(0));
-    let internal_follow_semaphore = Arc::new(lbs::Semaphore::new(1));
-    let current_follower_id = Arc::new(Mutex::new(0));
+    let leader_semaphore = Arc::new(Semaphore::new(0));
+    let internal_leader_semaphore = Arc::new(Semaphore::new(1));
+    let follow_semaphore = Arc::new(Semaphore::new(0));
+    let internal_follow_semaphore = Arc::new(Semaphore::new(1));
+    let current_follower_id = Arc::new(Mutex::new(-1));
     let mut handles = Vec::new();
 
     for id in 0..4 {
