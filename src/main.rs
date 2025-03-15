@@ -322,13 +322,15 @@ fn problem_3_8_exclusive_thread(
             while !selected {
                 internal_leader_semaphore.acquire();
                 search_semaphore.acquire();
+                println!("Leader {id} start");
                 {
                     let current_follower_id_value = current_follower_id.lock().unwrap();
                     if *current_follower_id_value == dancer.id {
-                        println!("Leader {id}");
+                        println!("Leader {id} acquired");
                         selected = true;
                     } else {
                         internal_leader_semaphore.release();
+                        search_semaphore.release();
                     }
                 }
             }
@@ -337,12 +339,13 @@ fn problem_3_8_exclusive_thread(
             println!("Leader {id} danced");
             internal_leader_semaphore.release();
         } else {
-            println!("Follow {id}");
             internal_follow_semaphore.acquire();
             {
                 let mut current_follower_id_value = current_follower_id.lock().unwrap();
                 *current_follower_id_value = id;
             }
+            println!("Follow {id} locked");
+            search_semaphore.release();
             follow_semaphore.release();
             leader_semaphore.acquire();
             println!("Follower {id} danced");
@@ -370,6 +373,7 @@ fn problem_3_8_exclusive() {
             internal_leader_semaphore.clone(),
             follow_semaphore.clone(),
             internal_follow_semaphore.clone(),
+            search_semaphore.clone(),
             current_follower_id.clone(),
             Dancer {
                 is_leader: true,
@@ -382,6 +386,7 @@ fn problem_3_8_exclusive() {
             internal_leader_semaphore.clone(),
             follow_semaphore.clone(),
             internal_follow_semaphore.clone(),
+            search_semaphore.clone(),
             current_follower_id.clone(),
             Dancer {
                 is_leader: false,
