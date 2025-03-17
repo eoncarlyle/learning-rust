@@ -11,24 +11,21 @@ fn problem_3_8_thread(
     label: String,
 ) -> JoinHandle<()> {
     return thread::spawn(move || {
-        let mut is_empty = true;
-
-        {
-            let mut dancer_list_data = dancer_list.lock().unwrap();
-            let data = *dancer_list_data;
-            is_empty = data.is_empty();
-        }
-
-        while !is_empty {
+        loop {
+            {
+                let dancer_list_data = dancer_list.lock().unwrap();
+                if dancer_list_data.is_empty() {
+                    break;
+                }
+            }
             println!("{label} thread waiting");
             internal_turnstile.release();
             external_turnstile.acquire();
 
             {
                 let mut dancer_list_data = dancer_list.lock().unwrap();
-                let mut data = *dancer_list_data;
-                let a = data.pop_front();
-                a.map(|b| println!("{b}"));
+                let maybe_dancer = dancer_list_data.pop_front();
+                maybe_dancer.map(|dancer| println!("{dancer} danced"));
             }
         }
     });
