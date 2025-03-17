@@ -11,6 +11,15 @@ type ConcurrencyType =
     | ThreadModel
     | TaskModel
 
+type SemaphoreOperation =
+    | Release
+    | Wait
+
+let toggleSem (sem: Semaphore) (semaphoreOperation: SemaphoreOperation) =
+    match semaphoreOperation with
+    | Release -> sem.Release() |> ignore
+    | Wait -> sem.WaitOne() |> ignore
+
 let problem_3_8_thread
     (internal_sem: Semaphore)
     (external_sem: Semaphore)
@@ -18,8 +27,6 @@ let problem_3_8_thread
     (label: String)
     =
     Thread(fun () ->
-        Console.WriteLine("here")
-
         while true do
             if dancer_list.Count <> 0 then
                 Console.WriteLine $"{label} thread waiting"
@@ -61,7 +68,6 @@ let problem_3_8 concurrency_model =
         follow_list.Enqueue("follower2")
         follow_list.Enqueue("follower3")
 
-        follwers.Join()
     | TaskModel ->
         let leaders = problem_3_8_task leader_sem follower_sem leader_list "leader"
         let follwers = problem_3_8_task follower_sem leader_sem follow_list "follower"
@@ -186,7 +192,7 @@ let problem_3_8_provided_thread_followers
         rendezvous.Release() |> ignore)
 
 
-let problem_3_8_provided =
+let problem_3_8_provided () =
     let followCount = 3
     let leaderCount = followCount
     let mutexSem = new Semaphore(0, followCount)
@@ -210,4 +216,5 @@ let problem_3_8_provided =
 //let problem_3_8_provided_thread_dancer (leaders: int) (followers: int) (leaderQueue: Semaphore) (followerQueue: Semaphore) (rendezvous: Semaphore) =
 
 //problem_3_8_alt TaskModel
-problem_3_8_provided 
+//problem_3_8_provided ()
+problem_3_8 ConcurrencyType.ThreadModel
