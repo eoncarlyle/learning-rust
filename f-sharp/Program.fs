@@ -3,8 +3,13 @@ open System.Collections.Generic
 open System.Threading.Tasks
 open System
 
-type DancerType = Leader | Follower
-type ConcurrencyType = ThreadModel | TaskModel
+type DancerType =
+    | Leader
+    | Follower
+
+type ConcurrencyType =
+    | ThreadModel
+    | TaskModel
 
 let problem_3_8_thread
     (internal_sem: Semaphore)
@@ -66,7 +71,7 @@ let problem_3_8 concurrency_model =
 
 //problem_3_8 "tasks"
 
-let problem_3_8_thread_alt  (leaderQueue: Semaphore) (followerQueue: Semaphore) (dancerType: string) (id: int) =
+let problem_3_8_thread_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (dancerType: string) (id: int) =
     Thread(fun () ->
         Console.WriteLine($"{dancerType} {id} has arrived")
 
@@ -82,6 +87,7 @@ let problem_3_8_thread_alt  (leaderQueue: Semaphore) (followerQueue: Semaphore) 
             leaderQueue.WaitOne() |> ignore
             Console.WriteLine($"{dancerType} {id} paired with a leader")
             Thread.Sleep(0))
+
 let problem_3_8_task_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (dancerType: string) (id: int) =
     task {
         Console.WriteLine($"{dancerType} {id} has arrived")
@@ -99,26 +105,109 @@ let problem_3_8_task_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (da
             Console.WriteLine($"{dancerType} {id} paired with a leader")
             do! Task.Delay(0)
     }
-let problem_3_8_alt concurrency_model = 
+
+let problem_3_8_alt concurrency_model =
     // Claude initially halucinated new Semaphore(0,100)
     let leaderQueue = new Semaphore(0, 3)
     let followerQueue = new Semaphore(0, 3)
 
-    let dancers = [ ("leader", 1);
-          ( "follower", 1);
-          ( "leader", 2);
-          ( "leader", 3);
-          ( "follower", 2);
-          ( "follower", 3) ]
-         
-         
+    let dancers =
+        [ ("leader", 1)
+          ("follower", 1)
+          ("leader", 2)
+          ("leader", 3)
+          ("follower", 2)
+          ("follower", 3) ]
+
+
     match concurrency_model with
     | TaskModel ->
-        let threads = dancers |> List.map (fun d -> d ||> problem_3_8_thread_alt leaderQueue followerQueue)
+        let threads =
+            dancers
+            |> List.map (fun d -> d ||> problem_3_8_thread_alt leaderQueue followerQueue)
+
         threads |> List.iter _.Start()
         threads |> List.iter _.Join()
     | ThreadModel ->
-        let tasks = dancers |> List.map (fun d -> d ||> problem_3_8_task_alt leaderQueue followerQueue)
+        let tasks =
+            dancers
+            |> List.map (fun d -> d ||> problem_3_8_task_alt leaderQueue followerQueue)
+
         Task.WhenAll tasks |> ignore
 
-problem_3_8_alt TaskModel
+
+let problem_3_8_provided_thread_leaders
+    (leaders: int)
+    (followers: int)
+    (mutexSem: Semaphore)
+    (leaderQueue: Semaphore)
+    (followerQueue: Semaphore)
+    (rendezvous: Semaphore)
+    =
+    Thread(fun () ->
+        mutexSem.WaitOne() |> ignore
+
+        if followers > 0 then
+            let followRef = ref followers
+            followRef.Value <- followers - 1
+            followerQueue.Release() |> ignore
+        else
+            let leadersRef = ref leaders
+            leadersRef.Value <- leaders + 1
+            mutexSem.Release() |> ignore
+            leaderQueue.WaitOne() |> ignore
+
+        Console.WriteLine $"Dancing Leader"
+        rendezvous.WaitOne() |> ignore
+        mutexSem.Release() |> ignore)
+
+let problem_3_8_provided_thread_followers
+    (leaders: int)
+    (followers: int)
+    (mutexSem: Semaphore)
+    (leaderQueue: Semaphore)
+    (followerQueue: Semaphore)
+    (rendezvous: Semaphore)
+    =
+    Thread(fun () ->
+        mutexSem.WaitOne() |> ignore
+
+        if followers > 0 then
+            let followRef = ref followers
+            followRef.Value <- followers - 1
+            followerQueue.Release() |> ignore
+        else
+            let leadersRef = ref leaders
+            leadersRef.Value <- leaders + 1
+            mutexSem.Release() |> ignore
+            leaderQueue.WaitOne() |> ignore
+
+        Console.WriteLine $"Dancing Follower"
+        rendezvous.Release() |> ignore)
+
+
+let problem_3_8_provided =
+    let followCount = 3
+    let leaderCount = followCount
+    let mutexSem = new Semaphore(0, followCount)
+    let leaderQueue = new Semaphore(0, followCount)
+    let followerQueue = new Semaphore(0, followCount)
+    let rendezvous = new Semaphore(0, followCount)
+
+    let threads =
+        seq { 0..3 }
+        |> Seq.map (fun index ->
+            if index % 2 = 0 then
+                problem_3_8_provided_thread_followers
+            else
+                problem_3_8_provided_thread_followers)
+        |> Seq.map (fun a -> a leaderCount followCount mutexSem leaderQueue followerQueue rendezvous)
+
+    threads |> Seq.iter _.Start()
+    Thread.Sleep(3)
+    threads |> Seq.iter _.Join()
+
+//let problem_3_8_provided_thread_dancer (leaders: int) (followers: int) (leaderQueue: Semaphore) (followerQueue: Semaphore) (rendezvous: Semaphore) =
+
+//problem_3_8_alt TaskModel
+problem_3_8_provided 

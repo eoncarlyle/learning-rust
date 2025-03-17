@@ -1,3 +1,5 @@
+# Chapter 3
+
 ## Section 3.3
 
 Puzzle: Generalize the signal pattern so that it works both ways. Thread A has
@@ -202,3 +204,5 @@ My non-solution for the exclusive dance queue was in `b4e86cb`, which had a dead
 a race condition where if _N_ was the original mutex value and the _N_ th leader acquired the mutex first but a ! 
 _N_ follower did the same, a race condition would apply. At this point we're using a _lot_ of mutexes, but I think 
 this could technicaly be fixed with another one
+
+The provided solution was much less restrictive than my idea, but I think my solution still makes sense
