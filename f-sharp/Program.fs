@@ -30,8 +30,8 @@ let problem_3_8_thread
         while true do
             if dancer_list.Count <> 0 then
                 Console.WriteLine $"{label} thread waiting"
-                internal_sem.Release() |> ignore
-                external_sem.WaitOne() |> ignore
+                toggleSem internal_sem Release
+                toggleSem external_sem Wait
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}")
 
 // `54d86e2`: held at first task, why?
@@ -40,8 +40,8 @@ let problem_3_8_task (internal_sem: Semaphore) (external_sem: Semaphore) (dancer
         while true do
             if dancer_list.Count <> 0 then
                 Console.WriteLine $"{label} thread waiting"
-                internal_sem.Release() |> ignore
-                external_sem.WaitOne() |> ignore
+                toggleSem internal_sem Release
+                toggleSem external_sem Wait
                 Console.WriteLine $"Dancer: {dancer_list.Dequeue()}"
     }
 
@@ -83,14 +83,14 @@ let problem_3_8_thread_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (
 
         match dancerType with
         | "leader" ->
-            leaderQueue.Release() |> ignore
+            toggleSem leaderQueue Release
             Console.WriteLine($"{dancerType} {id} is waiting")
-            followerQueue.WaitOne() |> ignore
+            toggleSem followerQueue Wait
             Console.WriteLine($"{dancerType} {id} paired with a follower")
         | _ ->
-            followerQueue.Release() |> ignore
+            toggleSem followerQueue Release
             Console.WriteLine($"{dancerType} {id} is waiting")
-            leaderQueue.WaitOne() |> ignore
+            toggleSem leaderQueue Wait
             Console.WriteLine($"{dancerType} {id} paired with a leader")
             Thread.Sleep(0))
 
@@ -100,14 +100,14 @@ let problem_3_8_task_alt (leaderQueue: Semaphore) (followerQueue: Semaphore) (da
 
         match dancerType with
         | "leader" ->
-            leaderQueue.Release() |> ignore
+            toggleSem leaderQueue Release
             Console.WriteLine($"{dancerType} {id} is waiting")
-            followerQueue.WaitOne() |> ignore
+            toggleSem followerQueue Wait
             Console.WriteLine($"{dancerType} {id} paired with a follower")
         | _ ->
-            followerQueue.Release() |> ignore
+            toggleSem followerQueue Release
             Console.WriteLine($"{dancerType} {id} is waiting")
-            leaderQueue.WaitOne() |> ignore
+            toggleSem leaderQueue Wait
             Console.WriteLine($"{dancerType} {id} paired with a leader")
             do! Task.Delay(0)
     }
@@ -151,21 +151,21 @@ let problem_3_8_provided_thread_leaders
     (rendezvous: Semaphore)
     =
     Thread(fun () ->
-        mutexSem.WaitOne() |> ignore
+        toggleSem mutexSem Wait
 
         if followers > 0 then
             let followRef = ref followers
             followRef.Value <- followers - 1
-            followerQueue.Release() |> ignore
+            toggleSem followerQueue Release
         else
             let leadersRef = ref leaders
             leadersRef.Value <- leaders + 1
-            mutexSem.Release() |> ignore
-            leaderQueue.WaitOne() |> ignore
+            toggleSem mutexSem Release
+            toggleSem leaderQueue Wait
 
         Console.WriteLine $"Dancing Leader"
-        rendezvous.WaitOne() |> ignore
-        mutexSem.Release() |> ignore)
+        toggleSem rendezvous Wait
+        toggleSem mutexSem Release)
 
 let problem_3_8_provided_thread_followers
     (leaders: int)
@@ -176,20 +176,21 @@ let problem_3_8_provided_thread_followers
     (rendezvous: Semaphore)
     =
     Thread(fun () ->
-        mutexSem.WaitOne() |> ignore
+        toggleSem mutexSem Wait
+
 
         if followers > 0 then
             let followRef = ref followers
             followRef.Value <- followers - 1
-            followerQueue.Release() |> ignore
+            toggleSem followerQueue Release
         else
             let leadersRef = ref leaders
             leadersRef.Value <- leaders + 1
-            mutexSem.Release() |> ignore
-            leaderQueue.WaitOne() |> ignore
+            toggleSem mutexSem Release
+            toggleSem leaderQueue Wait
 
         Console.WriteLine $"Dancing Follower"
-        rendezvous.Release() |> ignore)
+        toggleSem rendezvous Release)
 
 
 let problem_3_8_provided () =
