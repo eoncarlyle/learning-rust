@@ -1,5 +1,4 @@
 use crate::lbs::Semaphore;
-use parking_lot::Mutex as PLMutex;
 use std::collections::LinkedList;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
