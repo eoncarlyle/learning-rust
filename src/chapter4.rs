@@ -2,6 +2,7 @@ use rand::Rng;
 
 use crate::lbs::Semaphore;
 use std::collections::LinkedList;
+use std::env::VarsOs;
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
@@ -162,3 +163,37 @@ pub fn problem_4_1_4() {
     producer.join().unwrap();
     consumer.join().unwrap();
 }
+
+fn problem_4_2_writer(critical_semaphore: Arc<Semaphore>, label: String) {
+    loop {
+        critical_semaphore.acquire();
+        println!("Writer thread critical: {label}");
+        critical_semaphore.release();
+        println!("Writer thread release: {label}");
+    }
+}
+
+fn problem_4_2_reader(
+    write_state: Arc<Mutex<bool>>,
+    reader_count: Arc<Mutex<i64>>,
+    writer_count: Arc<Mutex<i64>>,
+    label: String,
+) -> JoinHandle<()> {
+    thread::spawn(move || {
+        loop {
+            //TODO re-write this to 'correct' way without the unwrap call
+            let current_write_state = write_state.lock().unwrap();
+            let current_reader_count = reader_count.lock().unwrap();
+            let current_writer_count = writer_count.lock().unwrap();
+
+            if !current_write_state {
+            } else if current_write_state && current_writer_count == 0 {
+            }
+
+            println!("Reader thread: {label}");
+            thread::sleep(Duration::from_secs(1));
+        }
+    })
+}
+
+pub fn problem_4_2() {}

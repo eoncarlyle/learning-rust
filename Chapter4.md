@@ -28,4 +28,6 @@ The above pair of consumers and producers deadlocks. If the consumer aquires the
 
 Lesson: aany time you wait for a semaphore while holding a mutex, there is danger of a deadlock.
 
-# 4.1.6: Finite buffer producer-consumer
+# 4.2: Readers-writers problem
+
+When attempting to solve this one, I was not able to think of a way to lock out only writer threads and no reader threads when one reader has started. I think the path forward is to have a mutex set the state of the threads - reading or writing
