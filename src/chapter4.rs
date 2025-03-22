@@ -164,36 +164,58 @@ pub fn problem_4_1_4() {
     consumer.join().unwrap();
 }
 
-fn problem_4_2_writer(critical_semaphore: Arc<Semaphore>, label: String) {
-    loop {
-        critical_semaphore.acquire();
-        println!("Writer thread critical: {label}");
-        critical_semaphore.release();
-        println!("Writer thread release: {label}");
-    }
+enum ReaderWriterIoState {
+    Reading,
+    Writing
+}
+
+struct ReaderWriterState {
+    value: i64,
+    io_state: ReaderWriterIoState,
+    reader_count: i64,
+    writer_count: i64,
 }
 
 fn problem_4_2_reader(
-    write_state: Arc<Mutex<bool>>,
-    reader_count: Arc<Mutex<i64>>,
-    writer_count: Arc<Mutex<i64>>,
+    mutex_sem: Arc<Semaphore>,
+    state: Arc<Mutex<ReaderWriterState>>,
     label: String,
-) -> JoinHandle<()> {
-    thread::spawn(move || {
-        loop {
-            //TODO re-write this to 'correct' way without the unwrap call
-            let current_write_state = write_state.lock().unwrap();
-            let current_reader_count = reader_count.lock().unwrap();
-            let current_writer_count = writer_count.lock().unwrap();
+) {
+    loop {
+        mutex_sem.acquire();
+        let mut thread_state = state.lock().unwrap();
+        let io_state = thread_state.io_state;
+        let reader_count = thread_state.reader_count;
+        let writer_count = thread_state.writer_count;
 
-            if !current_write_state {
-            } else if current_write_state && current_writer_count == 0 {
+        let read = || -> () {
+            thread_state.reader_count += 1;
+            let read_value = thread_state.value;
+            mutex_sem.release();
+            drop(thread_state);
+            println!("R{label}: Reading...");
+            println!("R{label}: Read {read_value}");
+
+        };
+
+        match (io_state, reader_count, writer_count) {
+            (ReaderWriterIoState::Reading, readers, 0) if readers >= 0 => {
+
             }
+            (ReaderWriterIoState::Writing, 0, 0)  => {
 
-            println!("Reader thread: {label}");
-            thread::sleep(Duration::from_secs(1));
+            }
+            (ReaderWriterIoState::Writing, 0, writers) if writers >= 0  => {
+
+            }
+            _ => { panic!("Illegal state: {io_state}, {reader_count}, {writer_count}") };
         }
-    })
+
+        state.lock().unwrap();
+        println!("Writer thread critical: {label}");
+        mutex_sem.release();
+        println!("Writer thread release: {label}");
+    }
 }
 
 pub fn problem_4_2() {}
