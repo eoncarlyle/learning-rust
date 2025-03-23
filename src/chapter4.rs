@@ -164,9 +164,10 @@ pub fn problem_4_1_4() {
     consumer.join().unwrap();
 }
 
+#[derive(Clone)]
 enum ReaderWriterIoState {
     Reading,
-    Writing
+    Writing,
 }
 
 struct ReaderWriterState {
@@ -181,41 +182,122 @@ fn problem_4_2_reader(
     state: Arc<Mutex<ReaderWriterState>>,
     label: String,
 ) {
-    loop {
-        mutex_sem.acquire();
-        let mut thread_state = state.lock().unwrap();
-        let io_state = thread_state.io_state;
-        let reader_count = thread_state.reader_count;
-        let writer_count = thread_state.writer_count;
+    thread::spawn(move || {
+        loop {
+            mutex_sem.acquire();
+            let mut thread_state = state.lock().unwrap();
+            let io_state = thread_state.io_state.clone();
+            let reader_count = thread_state.reader_count;
+            let writer_count = thread_state.writer_count;
 
-        let read = || -> () {
-            thread_state.reader_count += 1;
-            let read_value = thread_state.value;
+            match (io_state, reader_count, writer_count) {
+                (ReaderWriterIoState::Reading, readers, 0) if readers >= 0 => {
+                    thread_state.reader_count += 1;
+                    let read_value = thread_state.value;
+                    mutex_sem.release();
+                    drop(thread_state);
+                    println!("R{label}: Read {read_value}");
+                    mutex_sem.acquire();
+                    let mut inner_state = state.lock().unwrap();
+                    inner_state.reader_count -= 1;
+                    drop(inner_state);
+                    mutex_sem.release();
+                }
+                (ReaderWriterIoState::Writing, 0, 0) => {
+                    thread_state.io_state = ReaderWriterIoState::Reading;
+
+                    thread_state.reader_count += 1;
+                    let read_value = thread_state.value;
+                    mutex_sem.release();
+                    drop(thread_state);
+                    println!("R{label}: Read {read_value}");
+                    mutex_sem.acquire();
+                    let mut inner_state = state.lock().unwrap();
+                    inner_state.reader_count -= 1;
+                    drop(inner_state);
+                    mutex_sem.release();
+                }
+                (ReaderWriterIoState::Writing, 0, writers) if writers >= 0 => {
+                    println!("$R{label}: waiting");
+                    mutex_sem.release();
+                }
+                _ => {
+                    //let disp = match io_state {
+                    //    ReaderWriterIoState::Writing => "write",
+                    //    ReaderWriterIoState::Reading => "read",
+                    //};
+                    let disp = "todo";
+                    panic!("Illegal state: {disp}, {reader_count}, {writer_count}");
+                }
+            }
+
+            println!("Writer thread critical: {label}");
             mutex_sem.release();
-            drop(thread_state);
-            println!("R{label}: Reading...");
-            println!("R{label}: Read {read_value}");
-
-        };
-
-        match (io_state, reader_count, writer_count) {
-            (ReaderWriterIoState::Reading, readers, 0) if readers >= 0 => {
-
-            }
-            (ReaderWriterIoState::Writing, 0, 0)  => {
-
-            }
-            (ReaderWriterIoState::Writing, 0, writers) if writers >= 0  => {
-
-            }
-            _ => { panic!("Illegal state: {io_state}, {reader_count}, {writer_count}") };
+            println!("Writer thread release: {label}");
         }
+    });
+}
 
-        state.lock().unwrap();
-        println!("Writer thread critical: {label}");
-        mutex_sem.release();
-        println!("Writer thread release: {label}");
-    }
+fn problem_4_2_writer(
+    mutex_sem: Arc<Semaphore>,
+    state: Arc<Mutex<ReaderWriterState>>,
+    label: String,
+) {
+    thread::spawn(move || {
+        loop {
+            mutex_sem.acquire();
+            let mut thread_state = state.lock().unwrap();
+            let io_state = thread_state.io_state.clone();
+            let reader_count = thread_state.reader_count;
+            let writer_count = thread_state.writer_count;
+
+            match (io_state, reader_count, writer_count) {
+                (ReaderWriterIoState::Writing, 0, writing) if writing >= 0 => {
+                    thread_state.reader_count += 1;
+                    let read_value = thread_state.value;
+                    mutex_sem.release();
+                    drop(thread_state);
+                    println!("R{label}: Read {read_value}");
+                    mutex_sem.acquire();
+                    let mut inner_state = state.lock().unwrap();
+                    inner_state.reader_count -= 1;
+                    drop(inner_state);
+                    mutex_sem.release();
+                }
+                (ReaderWriterIoState::Reading, 0, 0) => {
+                    thread_state.io_state = ReaderWriterIoState::Writing;
+
+                    thread_state.reader_count += 1;
+                    let read_value = thread_state.value;
+                    mutex_sem.release();
+                    drop(thread_state);
+                    println!("R{label}: Read {read_value}");
+                    mutex_sem.acquire();
+                    let mut inner_state = state.lock().unwrap();
+                    inner_state.reader_count -= 1;
+                    drop(inner_state);
+                    mutex_sem.release();
+                }
+                (ReaderWriterIoState::Writing, 0, writers) if writers >= 0 => {
+                    println!("$R{label}: waiting");
+                    mutex_sem.release();
+                }
+                _ => {
+                    //let disp = match io_state {
+                    //    ReaderWriterIoState::Writing => "write",
+                    //    ReaderWriterIoState::Reading => "read",
+                    //};
+                    let disp = "todo";
+                    panic!("Illegal state: {disp}, {reader_count}, {writer_count}");
+                }
+            }
+
+            state.lock().unwrap();
+            println!("Writer thread critical: {label}");
+            mutex_sem.release();
+            println!("Writer thread release: {label}");
+        }
+    });
 }
 
 pub fn problem_4_2() {}
