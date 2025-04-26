@@ -38,7 +38,7 @@ let problem_4_2 =
     let reader_count = 2
     let writer_count = 2
     let occupied = new Semaphore(1, 1)
-    let lightswitch = Lightswitch(0)
+    let lightswitch = Lightswitch()
    
     let writers = [ 0..writer_count-1 ] |> List.map (fun i -> problem_4_2_write_thread i occupied)
     let readers = [ 0..reader_count-1 ] |> List.map (fun i -> problem_4_2_read_thread i occupied lightswitch)

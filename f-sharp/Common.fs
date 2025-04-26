@@ -15,9 +15,9 @@ let toggleSem (sem: Semaphore) (semaphoreOperation: SemaphoreOperation) =
     | Release -> sem.Release() |> ignore
     | Wait -> sem.WaitOne() |> ignore
 
-type Lightswitch(counter, mutex) =
-    let mutable counter = counter
-    let mutex = mutex
+type Lightswitch() =
+    let mutable counter = 0
+    let mutex = new Semaphore(1, 1)
     
     member this.Lock semaphore =
         toggleSem mutex Wait
