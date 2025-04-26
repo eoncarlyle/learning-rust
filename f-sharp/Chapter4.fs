@@ -1,91 +1,64 @@
 module Chapter4
-open System.ComponentModel
+open System.Runtime
 open Common
-open System
 open System.Threading
+open System
+open Microsoft.FSharp.Core
 
-type IoState =
-    | Reading
-    | Writing
+// Writers: if the room isn't occupied, toggle the occupancy sempahore
+// Readers: keep track of the number readers, if zero then toggle off occupancy
 
-let problem_4_2_writer
-    (mutexSem: Semaphore)
-    (focusedValue: byref<int>)
-    (ioState: byref<IoState>)
-    (readerCount: int)
-    (writerCount: byref<int>)
-    (label: String)
+let problem_4_2_write_thread
+    (label: int)
+    (occupied: Semaphore)
     =
-    Thread( fun () -> 
-        let rand = Random()
-        let mutable threadIoState = ioState
-        let mutable threadWriterCount = writerCount
-        let mutable threadFocusedValue = focusedValue
-
-        let write () =
-            threadWriterCount <- threadWriterCount + 1
-            toggleSem mutexSem Release
-            Console.WriteLine($"W{label}: Writing...")
-            let writtenValue = rand.Next(0, 10)
-            threadFocusedValue <- writtenValue
-            Console.WriteLine($"W{label}: Wrote {writtenValue}")
-            toggleSem mutexSem Wait
-            threadWriterCount <- threadWriterCount - 1
-            toggleSem mutexSem Release
-
-        let steal () =
-            threadIoState <- Writing
-            write ()
-
-        let wait () =
-            Console.WriteLine($"W:{label} reading")
-            toggleSem mutexSem Release
-            Thread.Sleep(300)
-
+    Thread(fun () ->
         while true do
-            toggleSem mutexSem Wait
-            match (threadIoState, readerCount, writerCount) with
-            | (Reading, 0, 0) -> steal ()
-            | (Writing, 0, 0) -> write ()
-            | (Reading, readers, 0) when readers > 0 -> wait ()
-            | _ -> raise (Exception($"Illegal state: {ioState}, {readerCount}, {writerCount}")))
+            Console.WriteLine $"{label} writer waiting"
+            toggleSem occupied Wait
+            Console.WriteLine $"{label} writer writing"
+            Thread.Sleep(300)
+            toggleSem occupied Release)
 
-let problem_4_2_reader
-    (mutexSem: Semaphore)
-    (focusedValue: byref<int>)
-    (ioState: byref<IoState>)
-    (readerCount: byref<int>)
-    (writerCount: int)
-    (label: String)
+let problem_4_2_read_thread
+    (label: int)
+    (occupied: Semaphore)
+    (reader_count_mutex: Semaphore)
+    (active_readers: Ref<int>)
     =
+    Thread(fun () ->
+        while true do
+            toggleSem reader_count_mutex Wait
+            if active_readers.Value = 0 then toggleSem occupied Wait
+            Console.WriteLine $"{label} reader writing {active_readers.Value + 1} to read_count"
+            active_readers.Value <- active_readers.Value + 1
+            toggleSem reader_count_mutex Release
+            
+            Console.WriteLine $"{label} reader reading"
+            Thread.Sleep(300)
+            
+            toggleSem reader_count_mutex Wait
+            let switching_off = active_readers.Value = 1
+            active_readers.Value <- active_readers.Value - 1
+            if switching_off then
+                Console.WriteLine $"{label} reader last one out"
+                toggleSem occupied Release
+                
+            toggleSem reader_count_mutex Release
+    )
     
-    let mutable threadIoState = ioState
-    let mutable threadReaderCount = readerCount
-    let mutable threadFocusedValue = focusedValue
+let problem_4_2 =
+    let reader_count = 2
+    let writer_count = 2
+    let occupied = new Semaphore(1, 1)
+    let reader_count_mutex = new Semaphore(1, 1)
+    let active_readers = ref 0
     
-    let read () =
-        threadReaderCount <- threadReaderCount + 1
-        toggleSem mutexSem Release
-        Console.WriteLine($"R{label}: Reading...")
-        Console.WriteLine($"R{label}: Read {threadFocusedValue}")
-        Thread.Sleep(300)
-        toggleSem mutexSem Wait
-        threadReaderCount <- threadReaderCount - 1
-        toggleSem mutexSem Release
-
-    let steal () =
-        threadIoState <- Reading
-        read ()
-
-    let wait () =
-        Console.WriteLine($"R:{label} reading")
-        toggleSem mutexSem Release
-        Thread.Sleep(300)
-
-    while true do
-        toggleSem mutexSem Wait
-        match (threadIoState, threadReaderCount, writerCount) with
-            | (Reading, readers, 0) when readers >= 0  -> read ()
-            | (Writing, 0, 0) -> steal ()
-            | (Writing, 0, writers) when writers > 0 -> wait ()
-            | _ -> raise (Exception($"Illegal state: {ioState}, {readerCount}, {writerCount}"))
+    let writers = [ 0..reader_count-1 ] |> List.map (fun i -> problem_4_2_write_thread i occupied)
+    let readers = [ 0..writer_count-1 ] |> List.map (fun i -> problem_4_2_read_thread i occupied reader_count_mutex active_readers)
+    writers |> List.iter _.Start()
+    readers |> List.iter _.Start()
+    
+    writers |> List.iter _.Join()
+    readers |> List.iter _.Join()
+    
