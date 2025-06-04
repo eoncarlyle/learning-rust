@@ -30,7 +30,9 @@ The above pair of consumers and producers deadlocks. If the consumer aquires the
 
 Lesson: any time you wait for a semaphore while holding a mutex, there is danger of a deadlock.
 
-# 4.2: Readers-writers problem
+## 4.2: Readers-writers problem
+
+### 4.2.2
 
 When attempting to solve this one, I was not able to think of a way to lock out only writer threads and no reader threads when one reader has started. I think the path forward is to have a mutex set the state of the threads - reading or writing.
 
@@ -43,3 +45,47 @@ roomEmpty = Semaphore(1)
 ```
 
 Where the mutex gaurded the readers count. When the readers dropped to zero they would release the `roomEmpty` mutex. My understanding was not realising how simple the solution could be. Things are not neccesarily made easier by Rust - the examples assume being able to change `readers` directly, something that probably has to be done in an `unsafe` block - but that wasn't the big thing.
+
+### 4.2.3
+
+While the provided solution was
+
+```python
+#Writer
+turnstile.wait()
+    roomEmpty.wait()
+    # Critical Section
+turnstile.signal()
+roomEmpty.signal()
+```
+
+```python
+#Reader
+turnstile.wait()
+turnstile.signal()
+readSwitch.lock(roomEmpty)
+    # Critical section
+readSwitch.unlock(roomEmpty)
+```
+
+My solution, in the same langauge, was
+
+```python
+#Writer
+turnstile.wait()
+    roomEmpty.wait()
+    turnstile.signal()
+    # Critical Section
+roomEmpty.signal()
+```
+
+```python
+#Reader
+turnstile.wait()
+readSwitch.lock(roomEmpty)
+turnstile.signal()
+    # Critical section
+readSwitch.unlock(roomEmpty)
+```
+
+I _think_ that this is fine from walking through the progression but for the next problem I will use the author's pattern
