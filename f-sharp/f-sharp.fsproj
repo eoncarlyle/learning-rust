@@ -10,6 +10,7 @@
     <Compile Include="Common.fs" />
     <Compile Include="Chapter4.fs" />
     <Compile Include="Chapter3.fs" />
+    <Compile Include="DiningPhilosopher.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

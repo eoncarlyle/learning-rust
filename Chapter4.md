@@ -89,3 +89,31 @@ readSwitch.unlock(roomEmpty)
 ```
 
 I _think_ that this is fine from walking through the progression but for the next problem I will use the author's pattern
+
+### 4.2.6
+
+Solving "allow all threads of one type through first" luckily is something that we have already addressed. If we tie the current turnstile to a lightswitch this should work. We can think of this as if there is a 'chamber' before the critical section
+
+I think the only meaningful difference between my solution and the provided solution is that I do a different ordering for semaphore to lightswitch. For the writer I lock the switch and then wait for the room to be unoccupied and for the writer I wait for the switch-bearing lock before locking a lightswitch. I think that it doens't matter because in the provided solution you have the readers waiting on a lock that the writers lock first, and the other way around in my solution i.e. I think that the following would be a problem
+
+```python
+noReaders.wait()
+    readSwitch.lock(noWriters)
+###
+noWriters.wait()
+    readSwitch.lock(noReaders)
+```
+
+# 4.3 No-starve Mutex
+Catagorical starvation: one _kind_ of thread can be blocked forever without intervention. This is different from 'normal' thread starvation where any given thread could wait indefinitely while others proceed. If starvation is unacceptable, **bounded waiting** is a restriction that the amount of time spent waiting is provably fininte. Note that if a thread is never scheduled by the scheduler then it will always starve no matter what we do, so some of the responsibilty rests on the OS scheduler.
+
+The assumption "if there are threads waiting on a semaphore when a thread executes signal, then one of the waiting threads has to be woken." certainly helps, but three threads are running the code below there is no gaurentee that we don't end up in a situation with two threads switching off indefinitely, starving the third.
+
+```python
+while True:
+    mutex.wait()
+    # Critical section
+    mutex.signal()
+```
+
+Dijkstra came to the conclusion that the number of threads woken by a semphore must be bounded in order to prevent mutex thread starvation, but J.M. Morris used two Semaphore barriers to demonstrate that this wasn't required.
