@@ -5,7 +5,7 @@ Learning Rust by working through ["The Little Book of Semaphores"](https://green
 
 ## Prompt snippets
 
-> Provide minimal code examples: I want to understand this concept, don't hesitate to ask me questions or probe to build my understanding. I'd like to work through this problem on my own first. Could you just give me high-level guidance or confirm my understanding without showing specific code implementations? After I've had a chance to solve it myself, I'll share my solution
+> Provide minimal code examples: I want to understand this concept, don't hesitate to ask me questions or probe to build my understanding. I'd like to work through this problem on my own first. For context, I am a software engineer with a few years of experience, but I am learning Rust and going through the 'Little Book of Semaphores' for the first time. Could you just give me high-level guidance or confirm my understanding without showing specific code implementations? After I've had a chance to solve it myself, I'll share my solution
 
 
 ## `121e445`

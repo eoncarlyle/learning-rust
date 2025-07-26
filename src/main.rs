@@ -7,6 +7,5 @@ mod lbs;
 mod safety_example;
 
 fn main() {
-    chapter4::problem_4_1_4();
-    //saftey_example::problem_3_8();
+    cigarette_smokers::problem_4_5_1();
 }

@@ -117,3 +117,34 @@ while True:
 ```
 
 Dijkstra came to the conclusion that the number of threads woken by a semphore must be bounded in order to prevent mutex thread starvation, but J.M. Morris used two Semaphore barriers to demonstrate that this wasn't required.
+
+# 4.5 Cigarette Smokers Problem
+> The agent repeatedly chooses two diﬀerent ingredients at random and makes
+them available to the smokers. Depending on which ingredients are chosen, the
+smoker with the complementary ingredient should pick up both resources and
+proceed.
+
+The three ingredients are tobacco, paper, and a match. If tobacco and match are selected first (and thus those semaphores are released/signaled), then _ideally_ the smoker with paper will acquire both sempahores and proceed. But if the other two smokers who need matches and tobacco acquire the sempahres first, then both will deadlock on paper.
+
+```text
+Smoker with matches
+┌─────────────────────┐
+│ tobacco.wait()      │
+│ paper.wait()        │
+│ agentSem.signal()   │
+└─────────────────────┘
+
+Smoker with tobacco
+┌─────────────────────┐
+│ paper.wait()        │
+│ match.wait()        │
+│ agentSem.signal()   │
+└─────────────────────┘
+
+Smoker with paper
+┌─────────────────────┐
+│ tobacco.wait()      │
+│ match.wait()        │
+│ agentSem.signal()   │
+└─────────────────────┘
+```
