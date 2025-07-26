@@ -46,22 +46,6 @@ pub fn problem_4_5_1() {
     let paper = Arc::new(Semaphore::new(0));
     let lighter = Arc::new(Semaphore::new(0));
 
-    fn release_resources(
-        first_rand_val: i64,
-        second_rand_val: i64,
-        tobacco: Arc<Semaphore>,
-        paper: Arc<Semaphore>,
-        lighter: Arc<Semaphore>,
-    ) {
-        for rand_val in vec![first_rand_val, second_rand_val] {
-            match rand_val {
-                1 => tobacco.release(),
-                2 => paper.release(),
-                _ => lighter.release(),
-            }
-        }
-    }
-
     let agent_a = agent_thread(
         String::from("a"),
         agent_sem.clone(),
@@ -102,18 +86,5 @@ pub fn problem_4_5_1() {
         agent_sem,
     );
 
-    loop {
-        let first_rand_val = rng.random_range(0..=3);
-        let second_rand_val = rng.random_range(0..=3);
-
-        release_resources(
-            first_rand_val,
-            second_rand_val,
-            tobacco.clone(),
-            paper.clone(),
-            lighter.clone(),
-        );
-
-        thread::sleep(time::Duration::from_millis(400));
-    }
+    agent_a.join().unwrap();
 }
