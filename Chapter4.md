@@ -148,3 +148,14 @@ Smoker with paper
 │ agentSem.signal()   │
 └─────────────────────┘
 ```
+
+I wasn't expecting to solve this in one go, but I should have gotten farther before this hint. _You are allowed to define different threads and condition variables as intermediaries for these problems!_ Don't go wild, but whenever you're in a situation where you need a 'synthetic' sempahore that bundles two different variables, then make a _real_ semaphore that actually _does_ aggregate this state.
+
+Other similar blind spots
+- "I can only use the primitives given"
+- "Coordination must happen at the resource level"
+Often the solution isn't about managing the resources themselves, but about managing who gets to try for resources.
+- "All threads must be symmetric"
+You might assume all smokers should have identical code structure, but sometimes the solution involves giving different threads different roles or behaviors.
+- "State can only be in semaphores"
+Don't forget you can use regular shared variables (with proper protection) to track state

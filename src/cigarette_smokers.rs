@@ -24,9 +24,9 @@ pub fn problem_4_5_1() {
 
     fn consumer_thread(
         label: String,
+        agent_sem: Arc<Semaphore>,
         first_waited_sem: Arc<Semaphore>,
         second_waited_sem: Arc<Semaphore>,
-        agent_sem: Arc<Semaphore>,
     ) -> JoinHandle<()> {
         return thread::spawn(move || {
             loop {
@@ -38,8 +38,6 @@ pub fn problem_4_5_1() {
             }
         });
     }
-
-    let mut rng = rand::rng();
 
     let agent_sem = Arc::new(Semaphore::new(1));
     let tobacco = Arc::new(Semaphore::new(0));
@@ -53,37 +51,39 @@ pub fn problem_4_5_1() {
         paper.clone(),
     );
 
-    let agent_b = agent_thread(
+    agent_thread(
         String::from("b"),
         agent_sem.clone(),
         paper.clone(),
         lighter.clone(),
     );
 
-    let agent_c = agent_thread(
+    agent_thread(
         String::from("c"),
         agent_sem.clone(),
         lighter.clone(),
         tobacco.clone(),
     );
 
-    let consumer_a = consumer_thread(
+    consumer_thread(
         String::from("a"),
+        agent_sem.clone(),
         tobacco.clone(),
         paper.clone(),
-        agent_sem.clone(),
     );
-    let consumer_b = consumer_thread(
+
+    consumer_thread(
         String::from("b"),
+        agent_sem.clone(),
         paper.clone(),
         lighter.clone(),
-        agent_sem.clone(),
     );
-    let consumer_c = consumer_thread(
+
+    consumer_thread(
         String::from("c"),
+        agent_sem.clone(),
         tobacco.clone(),
         lighter.clone(),
-        agent_sem,
     );
 
     agent_a.join().unwrap();
