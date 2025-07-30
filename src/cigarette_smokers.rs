@@ -1,21 +1,31 @@
 use crate::lbs::Semaphore;
-use rand::Rng;
+use std::sync::atomic::{self, AtomicBool};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::{i64, thread, time};
+use std::{thread, time};
 
-pub fn problem_4_5_1() {
+type Callback = fn() -> ();
+
+enum ResourceOwned {
+    Tobacco,
+    Paper,
+    Lighter,
+}
+
+fn problem_4_5() {
     fn agent_thread(
         label: String,
         agent_sem: Arc<Semaphore>,
         first_signaled_sem: Arc<Semaphore>,
         second_signaled_sem: Arc<Semaphore>,
+        cb: Callback,
     ) -> JoinHandle<()> {
         return thread::spawn(move || {
             loop {
                 agent_sem.acquire();
                 first_signaled_sem.release();
                 second_signaled_sem.release();
+                cb();
                 println!("agent {label} run");
                 thread::sleep(time::Duration::from_millis(400));
             }
@@ -23,68 +33,74 @@ pub fn problem_4_5_1() {
     }
 
     fn consumer_thread(
+        resource_owned: ResourceOwned,
         label: String,
         agent_sem: Arc<Semaphore>,
-        first_waited_sem: Arc<Semaphore>,
-        second_waited_sem: Arc<Semaphore>,
-    ) -> JoinHandle<()> {
-        return thread::spawn(move || {
-            loop {
-                first_waited_sem.acquire();
-                second_waited_sem.acquire();
-                agent_sem.release();
-                println!("consumer {label} run");
-                thread::sleep(time::Duration::from_millis(400));
+        resource_sems: &[Arc<Semaphore>],
+        resource_vars: &[Arc<AtomicBool>],
+    ) {
+        match resource_owned {
+            ResourceOwned::Tobacco => {
+                let res_a = resource_sems[0]
             }
-        });
+            ResourceOwned::Paper => {}
+            ResourceOwned::Lighter => {}
+        }
     }
+
+    let is_tobbacco = Arc::new(AtomicBool::new(false));
+    let is_paper = Arc::new(AtomicBool::new(false));
+    let is_lighter = Arc::new(AtomicBool::new(false));
 
     let agent_sem = Arc::new(Semaphore::new(1));
     let tobacco = Arc::new(Semaphore::new(0));
     let paper = Arc::new(Semaphore::new(0));
     let lighter = Arc::new(Semaphore::new(0));
 
+    fn make_callback(set_true: &[Arc<AtomicBool>], set_false: &[Arc<AtomicBool>]) -> Callback {
+        let set_true = set_true.to_vec();
+        let set_false = set_false.to_vec();
+
+        move || {
+            for item in &set_true {
+                item.store(true, atomic::Ordering::Relaxed);
+            }
+            for item in &set_false {
+                item.store(false, atomic::Ordering::Relaxed);
+            }
+        }
+    }
+
     let agent_a = agent_thread(
         String::from("a"),
         agent_sem.clone(),
         tobacco.clone(),
         paper.clone(),
+        make_callback(
+            &[is_tobbacco.clone(), is_paper.clone()],
+            &[is_lighter.clone()],
+        ),
     );
 
-    agent_thread(
+    let agent_b = agent_thread(
         String::from("b"),
         agent_sem.clone(),
         paper.clone(),
         lighter.clone(),
+        make_callback(
+            &[is_paper.clone(), is_lighter.clone()],
+            &[is_tobbacco.clone()],
+        ),
     );
 
-    agent_thread(
+    let agent_c = agent_thread(
         String::from("c"),
         agent_sem.clone(),
         lighter.clone(),
         tobacco.clone(),
+        make_callback(
+            &[is_lighter.clone(), is_tobbacco.clone()],
+            &[is_paper.clone()],
+        ),
     );
-
-    consumer_thread(
-        String::from("a"),
-        agent_sem.clone(),
-        tobacco.clone(),
-        paper.clone(),
-    );
-
-    consumer_thread(
-        String::from("b"),
-        agent_sem.clone(),
-        paper.clone(),
-        lighter.clone(),
-    );
-
-    consumer_thread(
-        String::from("c"),
-        agent_sem.clone(),
-        tobacco.clone(),
-        lighter.clone(),
-    );
-
-    agent_a.join().unwrap();
 }

@@ -159,3 +159,5 @@ Often the solution isn't about managing the resources themselves, but about mana
 You might assume all smokers should have identical code structure, but sometimes the solution involves giving different threads different roles or behaviors.
 - "State can only be in semaphores"
 Don't forget you can use regular shared variables (with proper protection) to track state
+
+"The & is about borrowing semantics - letting the function peek at your data without taking it away from you. The function then decides to clone what it needs for the closure."
