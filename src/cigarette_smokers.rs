@@ -32,6 +32,7 @@ fn problem_4_5() {
         });
     }
 
+    // TODO: pass only the semaphores and variables required to the thread
     fn consumer_thread(
         resource_owned: ResourceOwned,
         label: String,
@@ -39,10 +40,10 @@ fn problem_4_5() {
         resource_sems: &[Arc<Semaphore>],
         resource_vars: &[Arc<AtomicBool>],
     ) {
+        let vars = resource_vars.to_vec();
+        let sems = resource_sems.to_vec();
         match resource_owned {
-            ResourceOwned::Tobacco => {
-                let res_a = resource_sems[0]
-            }
+            ResourceOwned::Tobacco => {}
             ResourceOwned::Paper => {}
             ResourceOwned::Lighter => {}
         }
