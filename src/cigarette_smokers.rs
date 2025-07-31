@@ -4,12 +4,15 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{thread, time};
 
-type Callback = fn() -> ();
-
 enum ResourceOwned {
     Tobacco,
     Paper,
     Lighter,
+}
+
+struct agent_arg {
+    first_set_true: Arc<AtomicBool>,
+    second_set_true: Arc<AtomicBool>,
 }
 
 fn problem_4_5() {
@@ -18,14 +21,25 @@ fn problem_4_5() {
         agent_sem: Arc<Semaphore>,
         first_signaled_sem: Arc<Semaphore>,
         second_signaled_sem: Arc<Semaphore>,
-        cb: Callback,
+        set_true: &[Arc<AtomicBool>],
+        set_false: &[Arc<AtomicBool>],
     ) -> JoinHandle<()> {
         return thread::spawn(move || {
             loop {
                 agent_sem.acquire();
                 first_signaled_sem.release();
                 second_signaled_sem.release();
-                cb();
+
+                let set_true = set_true.to_vec();
+                let set_false = set_false.to_vec();
+
+                for item in &set_true {
+                    item.store(true, atomic::Ordering::Relaxed);
+                }
+                for item in &set_false {
+                    item.store(false, atomic::Ordering::Relaxed);
+                }
+
                 println!("agent {label} run");
                 thread::sleep(time::Duration::from_millis(400));
             }
@@ -58,29 +72,13 @@ fn problem_4_5() {
     let paper = Arc::new(Semaphore::new(0));
     let lighter = Arc::new(Semaphore::new(0));
 
-    fn make_callback(set_true: &[Arc<AtomicBool>], set_false: &[Arc<AtomicBool>]) -> Callback {
-        let set_true = set_true.to_vec();
-        let set_false = set_false.to_vec();
-
-        move || {
-            for item in &set_true {
-                item.store(true, atomic::Ordering::Relaxed);
-            }
-            for item in &set_false {
-                item.store(false, atomic::Ordering::Relaxed);
-            }
-        }
-    }
-
     let agent_a = agent_thread(
         String::from("a"),
         agent_sem.clone(),
         tobacco.clone(),
         paper.clone(),
-        make_callback(
-            &[is_tobbacco.clone(), is_paper.clone()],
-            &[is_lighter.clone()],
-        ),
+        &[is_tobbacco.clone(), is_paper.clone()],
+        &[is_lighter.clone()],
     );
 
     let agent_b = agent_thread(
@@ -88,10 +86,8 @@ fn problem_4_5() {
         agent_sem.clone(),
         paper.clone(),
         lighter.clone(),
-        make_callback(
-            &[is_paper.clone(), is_lighter.clone()],
-            &[is_tobbacco.clone()],
-        ),
+        &[is_paper.clone(), is_lighter.clone()],
+        &[is_tobbacco.clone()],
     );
 
     let agent_c = agent_thread(
@@ -99,9 +95,7 @@ fn problem_4_5() {
         agent_sem.clone(),
         lighter.clone(),
         tobacco.clone(),
-        make_callback(
-            &[is_lighter.clone(), is_tobbacco.clone()],
-            &[is_paper.clone()],
-        ),
+        &[is_lighter.clone(), is_tobbacco.clone()],
+        &[is_paper.clone()],
     );
 }
