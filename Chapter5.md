@@ -30,3 +30,5 @@ semaphoreB.signal()
 ```
 
 "The elegance comes from separating "pot is empty" (resource exhausted) from "pot is full" (resource replenished) into distinct channels. Many bugs come from trying to overload one signaling mechanism."
+
+"The core principle: When you need deterministic ordering or specific thread selection, basic semaphores aren't enough because their wakeup order is implementation-dependent. You need explicit coordination mechanisms."
