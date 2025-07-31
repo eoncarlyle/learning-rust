@@ -44,7 +44,7 @@ pub fn problem_4_5() {
                 second_signaled_sem.release();
 
                 first_set_true.store(true, atomic::Ordering::Relaxed);
-                second_set_true.store(false, atomic::Ordering::Relaxed);
+                second_set_true.store(true, atomic::Ordering::Relaxed);
                 set_false.store(false, atomic::Ordering::Relaxed);
 
                 println!("agent {label} run");
@@ -69,17 +69,15 @@ pub fn problem_4_5() {
             let mut ineligible = true;
 
             while ineligible {
-                first_sem.acquire();
-                second_sem.acquire();
-                if first_bool.load(atomic::Ordering::Acquire)
-                    && second_bool.load(atomic::Ordering::Acquire)
-                {
+                let c1 = first_bool.load(atomic::Ordering::Acquire);
+                let c2 = second_bool.load(atomic::Ordering::Acquire);
+
+                if c1 && c2 {
+                    first_sem.acquire();
+                    second_sem.acquire();
                     ineligible = false
-                } else {
-                    first_sem.release();
-                    second_sem.release();
-                    thread::sleep(time::Duration::from_millis(400));
                 }
+                println!("{label} consumer: {c1}/{c2}");
             }
 
             first_bool.store(false, atomic::Ordering::Relaxed);
