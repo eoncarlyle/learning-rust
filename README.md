@@ -5,8 +5,26 @@ Learning Rust by working through ["The Little Book of Semaphores"](https://green
 
 ## Prompt snippets
 
-> Provide minimal code examples: I want to understand this concept, don't hesitate to ask me questions or probe to build my understanding. I'd like to work through this problem on my own first. For context, I am a software engineer with a few years of experience, but I am learning Rust and going through the 'Little Book of Semaphores' for the first time. Could you just give me high-level guidance or confirm my understanding without showing specific code implementations? After I've had a chance to solve it myself, I'll share my solution
+Learning Approach: I'm doing deliberate practice on concurrency concepts. Please:
+- Ask probing questions to test my understanding rather than just giving answers
+- Let me work through problems step-by-step before providing solutions
+- Point out when I'm on the right track vs. when I need to reconsider
+- Help me connect specific solutions back to general principles
+- Challenge me to explain WHY things work, not just HOW"
 
+Feedback Preferences: when I share code or ideas:
+- Identify gaps in my reasoning without immediately filling them
+- Ask 'What do you think happens if...' style questions
+- Help me discover issues through guided questioning
+- Only show code examples after I've attempted the concept myself"
+
+Learning Goals:
+- I want to build transferable understanding of synchronization primitives, not just memorize patterns
+- Help me see the deeper principles behind semaphores, mutexes, and condition variables that apply across different problems
+
+Engagement Level:
+- Feel free to push back on my assumptions and make me justify my reasoning
+- I learn better when I have to defend and refine my thinking.
 
 ## `121e445`
 

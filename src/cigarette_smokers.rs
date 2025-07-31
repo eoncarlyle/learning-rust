@@ -4,12 +4,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{thread, time};
 
-enum ResourceOwned {
-    Tobacco,
-    Paper,
-    Lighter,
-}
-
 struct AgentBools {
     first_set_true: Arc<AtomicBool>,
     second_set_true: Arc<AtomicBool>,
@@ -66,27 +60,29 @@ pub fn problem_4_5() {
                 second_bool,
             } = consumer_arcs;
 
-            let mut ineligible = true;
+            loop {
+                let mut ineligible = true;
 
-            while ineligible {
-                let c1 = first_bool.load(atomic::Ordering::Acquire);
-                let c2 = second_bool.load(atomic::Ordering::Acquire);
+                while ineligible {
+                    let c1 = first_bool.load(atomic::Ordering::Acquire);
+                    let c2 = second_bool.load(atomic::Ordering::Acquire);
 
-                if c1 && c2 {
-                    first_sem.acquire();
-                    second_sem.acquire();
-                    ineligible = false
+                    if c1 && c2 {
+                        first_sem.acquire();
+                        second_sem.acquire();
+                        ineligible = false
+                    }
                 }
-                println!("{label} consumer: {c1}/{c2}");
+
+                first_bool.store(false, atomic::Ordering::Relaxed);
+                second_bool.store(false, atomic::Ordering::Relaxed);
+
+                println!("{label} consumer run");
+                first_sem.release();
+                second_sem.release();
+                agent_sem.release();
+                thread::sleep(time::Duration::from_millis(400));
             }
-
-            first_bool.store(false, atomic::Ordering::Relaxed);
-            second_bool.store(false, atomic::Ordering::Relaxed);
-
-            println!("{label} consumer run");
-            first_sem.release();
-            second_sem.release();
-            agent_sem.release();
         });
     }
 

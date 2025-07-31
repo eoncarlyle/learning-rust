@@ -161,3 +161,25 @@ You might assume all smokers should have identical code structure, but sometimes
 Don't forget you can use regular shared variables (with proper protection) to track state
 
 "The & is about borrowing semantics - letting the function peek at your data without taking it away from you. The function then decides to clone what it needs for the closure."
+
+`d20c7cf`:
+
+Q: Does my solution work for the same reason as pusher threads?
+A: The solution has a race condition. Multiple consumers can simultaneously see their conditions as true and proceed.
+Q: What's the core problem pusher threads solve?
+A: The spurious wakeup problem. When agent puts down tobacco + paper, wrong smokers might wake up if they see favorable conditions from previous rounds or timing issues.
+Q: What's the key insight about pusher threads?
+A: They create mutual exclusion around the decision-making process itself. Only one pusher thread can evaluate the ingredient state at a time via `mutex.wait().`
+Q: How does this prevent race conditions?
+A:
+- One pusher enters critical section
+- Sees isPaper = True, knows this is "tobacco + paper" combo
+- Immediately sets isPaper = False and signals match-holder
+- Next pusher finds state already "consumed"
+
+Key Takeaway: Pusher threads serialize the "pattern matching" of ingredient combinations, ensuring each combination gets consumed by exactly one smoker. Your solution lacks this serialization - all consumers check conditions independently without mutual exclusion.
+
+Q: What's the fundamental problem that both pusher threads and my mutex solution solve?
+A: The race condition where multiple consumers can simultaneously see favorable conditions and proceed. Without synchronization, when agent puts down tobacco + paper, both the lighter-holder AND paper-holder might see their conditions as true and both try to proceed.
+Q: What's the key mechanism that makes both solutions work?
+A: Mutual exclusion around the "check conditions and act" sequence. Whether it's pusher threads using mutex.wait() before checking isPaper/isMatch, or my consumers using a mutex around the c1 && c2 check - only one thread can evaluate and consume the ingredient state at a time.
