@@ -183,3 +183,5 @@ Q: What's the fundamental problem that both pusher threads and my mutex solution
 A: The race condition where multiple consumers can simultaneously see favorable conditions and proceed. Without synchronization, when agent puts down tobacco + paper, both the lighter-holder AND paper-holder might see their conditions as true and both try to proceed.
 Q: What's the key mechanism that makes both solutions work?
 A: Mutual exclusion around the "check conditions and act" sequence. Whether it's pusher threads using mutex.wait() before checking isPaper/isMatch, or my consumers using a mutex around the c1 && c2 check - only one thread can evaluate and consume the ingredient state at a time.
+
+"This is an example of a pattern we will see several times, which I call a scoreboard. The variables numPaper, numTobacco and numMatch keep track of the state of the system. As each thread files through the mutex, it checks the state as if looking at the scoreboard, and reacts accordingly."

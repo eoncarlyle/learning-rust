@@ -1,12 +1,15 @@
 use std::sync::{Condvar, Mutex};
 
-pub struct Semaphore {
-    count: Mutex<i64>,
+pub struct Semaphore<T = i64> {
+    count: Mutex<T>,
     cvar: Condvar,
 }
 
-impl Semaphore {
-    pub fn new(count: i64) -> Self {
+impl<T> Semaphore<T>
+where
+    T: Copy + PartialEq + From<u8> + std::ops::SubAssign + std::ops::AddAssign,
+{
+    pub fn new(count: T) -> Self {
         Semaphore {
             count: Mutex::new(count),
             cvar: Condvar::new(),
@@ -15,15 +18,15 @@ impl Semaphore {
 
     pub fn acquire(&self) {
         let mut count = self.count.lock().unwrap();
-        while *count == 0 {
+        while *count == T::from(0) {
             count = self.cvar.wait(count).unwrap();
         }
-        *count -= 1;
+        *count -= T::from(1);
     }
 
     pub fn release(&self) {
         let mut count = self.count.lock().unwrap();
-        *count += 1;
+        *count += T::from(1);
         self.cvar.notify_one();
     }
 }

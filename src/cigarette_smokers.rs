@@ -1,6 +1,6 @@
 use crate::lbs::Semaphore;
+use std::sync::Arc;
 use std::sync::atomic::{self, AtomicBool};
-use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{thread, time};
 

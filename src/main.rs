@@ -1,11 +1,8 @@
-use std::sync::{Arc, Mutex};
-use std::thread::{self};
-mod chapter3;
-mod chapter4;
 mod cigarette_smokers;
-mod lbs;
-mod safety_example;
+mod communal_pot;
+pub mod lbs;
 
 fn main() {
-    cigarette_smokers::problem_4_5();
+    //cigarette_smokers::problem_4_5();
+    communal_pot::run();
 }
