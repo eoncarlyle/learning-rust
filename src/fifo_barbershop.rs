@@ -31,11 +31,9 @@ pub fn run() {
 
     fn set_chair(chair_scoreboard: &Arc<Vec<AtomicBool>>, chair_idx: usize, value: bool) {
         let chair = chair_scoreboard.get(chair_idx);
-        println!("Load: {chair_idx}/{value}");
+        //println!("Load: {chair_idx}/{value}");
         chair.map(|a| {
-            if a.load(SeqCst) {
-                a.store(value, SeqCst);
-            }
+            a.store(value, SeqCst);
         });
     }
 
@@ -50,26 +48,24 @@ pub fn run() {
             loop {
                 scoreboard_mutex.acquire();
                 let mut selected_idx = CHAIR_COUNT + 1;
-                let mut a = Vec::new();
                 for chair_idx in 0..CHAIR_COUNT {
                     if chair_scoreboard.get(chair_idx).unwrap().load(SeqCst) {
-                        a.push("1");
                         selected_idx = chair_idx;
                         set_chair(&chair_scoreboard, selected_idx, false);
                         break;
                     } else {
-                        a.push("0");
                     }
                 }
-                let b = a.join("");
-                println!("{}", b);
+                //println!("{}", b);
                 scoreboard_mutex.release();
                 if selected_idx == CHAIR_COUNT + 1 {
                     //println!("Customer {label} balked");
                     thread::sleep(Duration::from_millis(400));
                 } else {
-                    tx.send(selected_idx);
+                    println!("Request: {label}/{selected_idx}");
+                    tx.send(selected_idx).unwrap();
                     &chair_semaphores[selected_idx].acquire();
+                    println!("Response: {label}/{selected_idx}");
 
                     scoreboard_mutex.acquire();
                     set_chair(&chair_scoreboard, selected_idx, true);

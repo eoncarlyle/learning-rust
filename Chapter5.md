@@ -52,3 +52,5 @@ semaphoreB.signal()
             }
         });
 ```
+- We have duplicated open chairs because the sempahore is both how the consumers are being seated and how the barber signals - because they are initially open the first request sails through and the second one waits
+- Need different seat, request semaphores
