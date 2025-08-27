@@ -26,6 +26,13 @@ pub fn run() {
             .collect(),
     );
 
+    let request_semaphores: Arc<Vec<_>> = Arc::new(
+        (0..CHAIR_COUNT)
+            .into_iter()
+            .map(|_| Semaphore::new(0))
+            .collect(),
+    );
+
     let (tx, rx) = channel::<usize>();
     let arctx = Arc::new(tx);
 
@@ -41,7 +48,7 @@ pub fn run() {
         label: String,
         scoreboard_mutex: Arc<Semaphore<i32>>,
         chair_scoreboard: Arc<Vec<AtomicBool>>,
-        chair_semaphores: Arc<Vec<Semaphore>>,
+        request_semphores: Arc<Vec<Semaphore>>,
         tx: Arc<Sender<usize>>,
     ) -> JoinHandle<()> {
         return thread::spawn(move || {
@@ -64,8 +71,8 @@ pub fn run() {
                 } else {
                     println!("Request: {label}/{selected_idx}");
                     tx.send(selected_idx).unwrap();
-                    &chair_semaphores[selected_idx].acquire();
-                    println!("Response: {label}/{selected_idx}");
+                    &request_semphores[selected_idx].acquire();
+                    //println!("Response: {label}/{selected_idx}");
 
                     scoreboard_mutex.acquire();
                     set_chair(&chair_scoreboard, selected_idx, true);
@@ -76,13 +83,13 @@ pub fn run() {
         });
     }
 
-    fn barber(rx: Receiver<usize>, chair_semaphores: Arc<Vec<Semaphore>>) -> JoinHandle<()> {
+    fn barber(rx: Receiver<usize>, request_semphores: Arc<Vec<Semaphore>>) -> JoinHandle<()> {
         return thread::spawn(move || {
             loop {
                 let idx = rx.recv().unwrap();
 
                 //Ideally I'd do this more monadically, but we are going from result to option
-                let sem = &chair_semaphores[idx];
+                let sem = &request_semphores[idx];
                 println!("Barber cutting {idx}");
                 sem.release();
                 thread::sleep(Duration::from_millis(400));
@@ -95,10 +102,10 @@ pub fn run() {
             l.to_string(),
             scoreboard_mutex.clone(),
             chair_scoreboard.clone(),
-            chair_semaphores.clone(),
+            request_semaphores.clone(),
             arctx.clone(),
         );
     });
 
-    barber(rx, chair_semaphores).join();
+    barber(rx, request_semaphores).join();
 }
