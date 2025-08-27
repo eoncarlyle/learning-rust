@@ -38,3 +38,4 @@ semaphoreB.signal()
 - However, doing this without introducing a race condition in between checking the scoreboard and trying to sit down could get annoying
 - We need to have specific sempahores for each seat to make this work, but I think placing the semaphore into the queue is the best way to handle this
 - If I wanted to stick with atomic references, the scoreboard could be the lowest free index (Sempahore + atomic int like before)
+- I think overall I am making this too complicated
