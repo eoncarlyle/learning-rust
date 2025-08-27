@@ -3,9 +3,9 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
+use std::{thread, vec};
 
 pub fn run() {
     static CHAIR_COUNT: usize = 5;
@@ -29,10 +29,9 @@ pub fn run() {
     let (tx, rx) = channel::<usize>();
     let arctx = Arc::new(tx);
 
-    // The
     fn set_chair(chair_scoreboard: &Arc<Vec<AtomicBool>>, chair_idx: usize, value: bool) {
-        println!("Load: {chair_idx}/{value}");
         let chair = chair_scoreboard.get(chair_idx);
+        println!("Load: {chair_idx}/{value}");
         chair.map(|a| {
             if a.load(SeqCst) {
                 a.store(value, SeqCst);
@@ -51,32 +50,32 @@ pub fn run() {
             loop {
                 scoreboard_mutex.acquire();
                 let mut selected_idx = CHAIR_COUNT + 1;
+                let mut a = Vec::new();
                 for chair_idx in 0..CHAIR_COUNT {
-                    //let a = chair_scoreboard.get(chair_idx).unwrap();
-                    //let b = if a.load(SeqCst) { 1 } else { 0 };
-                    //println!("{b}");
                     if chair_scoreboard.get(chair_idx).unwrap().load(SeqCst) {
+                        a.push("1");
                         selected_idx = chair_idx;
-                        println!("Tjread {label}");
-                        set_chair(&chair_scoreboard, chair_idx, false);
-                        continue; //bug!
+                        set_chair(&chair_scoreboard, selected_idx, false);
+                        break;
+                    } else {
+                        a.push("0");
                     }
                 }
+                let b = a.join("");
+                println!("{}", b);
                 scoreboard_mutex.release();
-                println!("{label}, {selected_idx}");
                 if selected_idx == CHAIR_COUNT + 1 {
-                    //println!("Customer {} balked", label);
-                    thread::sleep(Duration::from_millis(100));
+                    //println!("Customer {label} balked");
+                    thread::sleep(Duration::from_millis(400));
                 } else {
                     tx.send(selected_idx);
                     &chair_semaphores[selected_idx].acquire();
 
                     scoreboard_mutex.acquire();
                     set_chair(&chair_scoreboard, selected_idx, true);
-                    println!("{label}");
                     scoreboard_mutex.release();
                 }
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(400));
             }
         });
     }

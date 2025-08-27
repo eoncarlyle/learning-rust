@@ -43,3 +43,12 @@ semaphoreB.signal()
 "The type you're seeing &<Vec<Semaphore> as Index<i32>>::Output is Rust's way of showing that it's trying to use i32 as an index, but Vec<T> doesn't implement Index<i32> - only Index<usize>." This was the issue with `let (tx, rx) = channel::<i32>();`
 
 - The difference between `fn set_chair(chair_scoreboard: Arc<Vec<AtomicBool>>, chair_idx: usize, value: bool)` and the `&Arc` equivalent are important
+- Continue vs. break bug in customer for `6243563`
+- Doesn't work!
+```rust
+        chair.map(|a| {
+            if a.load(SeqCst) { //Bug!
+                a.store(value, SeqCst);
+            }
+        });
+```
