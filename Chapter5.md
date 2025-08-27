@@ -39,3 +39,7 @@ semaphoreB.signal()
 - We need to have specific sempahores for each seat to make this work, but I think placing the semaphore into the queue is the best way to handle this
 - If I wanted to stick with atomic references, the scoreboard could be the lowest free index (Sempahore + atomic int like before)
 - I think overall I am making this too complicated
+
+"The type you're seeing &<Vec<Semaphore> as Index<i32>>::Output is Rust's way of showing that it's trying to use i32 as an index, but Vec<T> doesn't implement Index<i32> - only Index<usize>." This was the issue with `let (tx, rx) = channel::<i32>();`
+
+- The difference between `fn set_chair(chair_scoreboard: Arc<Vec<AtomicBool>>, chair_idx: usize, value: bool)` and the `&Arc` equivalent are important
