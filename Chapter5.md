@@ -32,3 +32,9 @@ semaphoreB.signal()
 "The elegance comes from separating "pot is empty" (resource exhausted) from "pot is full" (resource replenished) into distinct channels. Many bugs come from trying to overload one signaling mechanism."
 
 "The core principle: When you need deterministic ordering or specific thread selection, basic semaphores aren't enough because their wakeup order is implementation-dependent. You need explicit coordination mechanisms."
+
+## FIFO Barbershop
+- My first thought was to make a list of Semaphores for the available seats, and use `std::sync::mpsc::channel` to queue indicies of customers as they sit down
+- However, doing this without introducing a race condition in between checking the scoreboard and trying to sit down could get annoying
+- We need to have specific sempahores for each seat to make this work, but I think placing the semaphore into the queue is the best way to handle this
+- If I wanted to stick with atomic references, the scoreboard could be the lowest free index (Sempahore + atomic int like before)
