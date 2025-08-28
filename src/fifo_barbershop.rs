@@ -1,4 +1,5 @@
 use crate::lbs::Semaphore;
+use std::process::id;
 use std::sync::Arc;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize};
@@ -51,7 +52,7 @@ pub fn run() {
         request_semphores: Arc<Vec<Semaphore>>,
         tx: Arc<Sender<usize>>,
     ) -> JoinHandle<()> {
-        return thread::spawn(move || {
+        thread::spawn(move || {
             loop {
                 scoreboard_mutex.acquire();
                 let mut selected_idx = CHAIR_COUNT + 1;
@@ -80,21 +81,17 @@ pub fn run() {
                 }
                 thread::sleep(Duration::from_millis(400));
             }
-        });
+        })
     }
 
     fn barber(rx: Receiver<usize>, request_semphores: Arc<Vec<Semaphore>>) -> JoinHandle<()> {
-        return thread::spawn(move || {
-            loop {
-                let idx = rx.recv().unwrap();
-
-                //Ideally I'd do this more monadically, but we are going from result to option
-                let sem = &request_semphores[idx];
+        thread::spawn(move || {
+            rx.iter().for_each(|idx| {
+                request_semphores[idx].release();
                 println!("Barber cutting {idx}");
-                sem.release();
                 thread::sleep(Duration::from_millis(400));
-            }
-        });
+            });
+        })
     }
 
     (0..10).for_each(|l| {

@@ -54,3 +54,5 @@ semaphoreB.signal()
 ```
 - We have duplicated open chairs because the sempahore is both how the consumers are being seated and how the barber signals - because they are initially open the first request sails through and the second one waits
 - Need different seat, request semaphores
+- Takeaway: if you are using channels or two other sources of truth, consider a state diagram to keep consumers on the same page
+- 'rx.iter() naturally handles the Result → Option conversion and provides a clean functional interface'
