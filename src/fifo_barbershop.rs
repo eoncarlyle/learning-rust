@@ -20,19 +20,14 @@ pub fn run() {
 
     let scoreboard_mutex = Arc::new(Semaphore::new(1));
 
-    let chair_semaphores: Arc<Vec<_>> = Arc::new(
-        (0..CHAIR_COUNT)
-            .into_iter()
-            .map(|_| Semaphore::new(1))
-            .collect(),
-    );
-
-    let request_semaphores: Arc<Vec<_>> = Arc::new(
+    let customer_semaphores: Arc<Vec<_>> = Arc::new(
         (0..CHAIR_COUNT)
             .into_iter()
             .map(|_| Semaphore::new(0))
             .collect(),
     );
+
+    let request_mutex = Arc::new(Semaphore::new(0));
 
     let (tx, rx) = channel::<usize>();
     let arctx = Arc::new(tx);
@@ -40,7 +35,7 @@ pub fn run() {
     fn set_chair(chair_scoreboard: &Arc<Vec<AtomicBool>>, chair_idx: usize, value: bool) {
         let chair = chair_scoreboard.get(chair_idx);
         //println!("Load: {chair_idx}/{value}");
-        chair.map(|a| {
+        chair.inspect(|a| {
             a.store(value, SeqCst);
         });
     }
@@ -49,44 +44,51 @@ pub fn run() {
         label: String,
         scoreboard_mutex: Arc<Semaphore<i32>>,
         chair_scoreboard: Arc<Vec<AtomicBool>>,
-        request_semphores: Arc<Vec<Semaphore>>,
+        customer_sempahores: Arc<Vec<Semaphore>>,
+        request_mutex: Arc<Semaphore<i32>>,
         tx: Arc<Sender<usize>>,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
             loop {
                 scoreboard_mutex.acquire();
-                let mut selected_idx = CHAIR_COUNT + 1;
-                for chair_idx in 0..CHAIR_COUNT {
-                    if chair_scoreboard.get(chair_idx).unwrap().load(SeqCst) {
-                        selected_idx = chair_idx;
-                        set_chair(&chair_scoreboard, selected_idx, false);
-                        break;
-                    } else {
+
+                let maybe_selected_index = (0..CHAIR_COUNT)
+                    .find(|chair_idx| chair_scoreboard.get(*chair_idx).unwrap().load(SeqCst));
+
+                maybe_selected_index.inspect(|idx| {
+                    set_chair(&chair_scoreboard, *idx, false);
+                    println!("Request: {label}/{idx}");
+                    tx.send(*idx).unwrap();
+                });
+
+                scoreboard_mutex.release();
+
+                match maybe_selected_index {
+                    None => {
+                        //println!("Customer {label} balked");
+                    }
+                    Some(idx) => {
+                        request_mutex.release();
+                        customer_sempahores[idx].acquire();
+                        scoreboard_mutex.acquire();
+                        set_chair(&chair_scoreboard, idx, true);
+                        scoreboard_mutex.release();
                     }
                 }
-                //println!("{}", b);
-                scoreboard_mutex.release();
-                if selected_idx == CHAIR_COUNT + 1 {
-                    //println!("Customer {label} balked");
-                    thread::sleep(Duration::from_millis(400));
-                } else {
-                    println!("Request: {label}/{selected_idx}");
-                    tx.send(selected_idx).unwrap();
-                    &request_semphores[selected_idx].acquire();
-                    //println!("Response: {label}/{selected_idx}");
 
-                    scoreboard_mutex.acquire();
-                    set_chair(&chair_scoreboard, selected_idx, true);
-                    scoreboard_mutex.release();
-                }
                 thread::sleep(Duration::from_millis(400));
             }
         })
     }
 
-    fn barber(rx: Receiver<usize>, request_semphores: Arc<Vec<Semaphore>>) -> JoinHandle<()> {
+    fn barber(
+        rx: Receiver<usize>,
+        request_semphores: Arc<Vec<Semaphore>>,
+        request_mutex: Arc<Semaphore<i32>>,
+    ) -> JoinHandle<()> {
         thread::spawn(move || {
             rx.iter().for_each(|idx| {
+                request_mutex.acquire();
                 request_semphores[idx].release();
                 println!("Barber cutting {idx}");
                 thread::sleep(Duration::from_millis(400));
@@ -99,10 +101,11 @@ pub fn run() {
             l.to_string(),
             scoreboard_mutex.clone(),
             chair_scoreboard.clone(),
-            request_semaphores.clone(),
+            customer_semaphores.clone(),
+            request_mutex.clone(),
             arctx.clone(),
         );
     });
 
-    barber(rx, request_semaphores).join();
+    barber(rx, customer_semaphores, request_mutex).join();
 }

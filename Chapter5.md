@@ -56,3 +56,13 @@ semaphoreB.signal()
 - Need different seat, request semaphores
 - Takeaway: if you are using channels or two other sources of truth, consider a state diagram to keep consumers on the same page
 - 'rx.iter() naturally handles the Result → Option conversion and provides a clean functional interface'
+
+### `5f6f558`
+- This was broken in two ways
+  1) The `tx.send(selected_idx).unwrap()` being outside of the `scoreboard_mutex` meant that the FIFO invariant could be broken by a 'malicous scheduler': no mutex means no ordering gaurentee
+  2) It would be possible for the `request_semphores[idx].release();` in the barber to be called before the customer actually signals on the mutex. While this is not per se a requirement, it is definitely in the spirit of the problem
+  3) You can end up with a sitation where consumer A reserves a chair before consumer B, but consumer B carries out `customer_sempahores[idx].acquire();` first (this is broken in current solution)
+- The greater lesson is
+  1) If something needs to be inside of a mutex to be correct without introducing race conditions, you are asking for problems if another thread needs it and you don't keep the _communication_ in the mutex too
+  2) I think I have this written down, but the 'cross thread turnstile' that uses a turnstile mediated by two semaphores has a multi-thread analouge and it is needed if you need to gaurentee that a response takes place before a request
+  3) If you need strict ordering when sending semaphroes through a queue, you are almost certainly better off sending the actual sempahores rather than indicies to semaphores: if you have one consumer then the consumer should take a 'ready' sempahore and signal it, otherwise multiple publishers can get out of order!
